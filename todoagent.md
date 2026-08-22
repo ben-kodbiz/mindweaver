@@ -24,6 +24,20 @@ The central product principle is:
 
 ---
 
+```
+Core Application
+      ▲
+      │ may be used by
+      │
+Intelligence Layer (optional)
+      ▲
+      │ may be used by
+      │
+UI Features
+```
+
+Never invert: the core application must not depend on the intelligence layer.
+
 # 1. Non-Negotiable Engineering Rules
 
 ## 1.1 Architecture rules

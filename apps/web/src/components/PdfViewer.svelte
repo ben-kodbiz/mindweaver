@@ -66,7 +66,10 @@
     const maxSide = 1600;
     const effective = Math.min(
       scale,
-      Math.max(0.4, maxSide / Math.max(baseViewport.width, baseViewport.height))
+      Math.max(
+        0.4,
+        maxSide / Math.max(baseViewport.width, baseViewport.height),
+      ),
     );
     const viewport = pdfPage.getViewport({ scale: effective });
     canvasEl.width = viewport.width;

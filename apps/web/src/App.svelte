@@ -43,13 +43,13 @@
   async function upload() {
     if (!selectedFile) return;
     uploading = true;
-    uploadMessage = 'Reading your PDF…';
+    uploadMessage = "Reading your PDF…";
     try {
       const body = new FormData();
-      body.append('file', selectedFile);
-      const res = await fetch('/api/v1/documents', { method: 'POST', body });
+      body.append("file", selectedFile);
+      const res = await fetch("/api/v1/documents", { method: "POST", body });
       if (res.status === 409) {
-        uploadMessage = 'That PDF is already in your library.';
+        uploadMessage = "That PDF is already in your library.";
         return;
       }
       if (!res.ok) {
@@ -60,7 +60,8 @@
       selectedFile = null;
       await refresh();
     } catch {
-      uploadMessage = 'Sorry — that PDF could not be added. Is it a normal PDF file?';
+      uploadMessage =
+        "Sorry — that PDF could not be added. Is it a normal PDF file?";
     } finally {
       uploading = false;
     }
@@ -74,7 +75,7 @@
       ocr_required: "Needs OCR",
       processing_ocr: "Reading scanned pages",
       ready: "Ready",
-      failed: "Failed"
+      failed: "Failed",
     };
     return words[status] ?? status;
   }
@@ -86,10 +87,12 @@
     ocrBusy = doc.id;
     uploadMessage = null;
     try {
-      await fetch(`/api/v1/documents/${doc.id}/reprocess-ocr`, { method: 'POST' });
+      await fetch(`/api/v1/documents/${doc.id}/reprocess-ocr`, {
+        method: "POST",
+      });
       await refresh();
     } catch {
-      uploadMessage = 'Could not read the scanned pages.';
+      uploadMessage = "Could not read the scanned pages.";
     } finally {
       ocrBusy = null;
     }
@@ -127,7 +130,7 @@
       <div class="upload">
         <input type="file" accept=".pdf,application/pdf" onchange={pickFile} />
         <button onclick={upload} disabled={!selectedFile || uploading}>
-          {uploading ? 'Working…' : 'Add to library'}
+          {uploading ? "Working…" : "Add to library"}
         </button>
       </div>
       {#if uploadMessage}
@@ -149,7 +152,8 @@
           <li>
             <div class="doc">
               <button class="doc-open" onclick={() => openMap(doc)}>
-                <span class="doc-title">{doc.title || doc.original_filename}</span
+                <span class="doc-title"
+                  >{doc.title || doc.original_filename}</span
                 >
                 <span class="doc-meta">
                   {friendlyStatus(doc.status)} · {doc.page_count ?? "?"} pages

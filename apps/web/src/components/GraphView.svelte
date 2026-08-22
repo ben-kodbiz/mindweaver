@@ -4,7 +4,10 @@
   import cytoscape from "cytoscape";
   import type { Core, ElementDefinition } from "cytoscape";
   import {
+    acceptAiProposal,
+    aiExpandNode,
     createConnection,
+    getIntelStatus,
     createPersonalNode,
     deleteGraphNode,
     getGraph,
@@ -66,6 +69,9 @@
   let connectSource = $state<string | null>(null);
   let actionMsg = $state<string | null>(null);
   let actionError = $state<string | null>(null);
+  let intelEnabled = $state(false);
+  let aiProposal = $state<{ node_id: string; children: { label: string; relationship: string; description: string; evidence: { chunk_id: string; page_number: number }[] }[] } | null>(null);
+  let aiBusy = $state(false);
 
   let selectedNodeTypes = $state<string[]>([...ALL_NODE_TYPES]);
   let selectedRelations = $state<string[]>([...ALL_RELATIONS]);
@@ -73,7 +79,13 @@
   let search = $state("");
   let selectedLabel = $state<string | null>(null);
 
-  onMount(() => {
+  onMount(async () => {
+    try {
+      const status = await getIntelStatus();
+      intelEnabled = status.enabled && status.node_expansion?.enabled === true;
+    } catch {
+      intelEnabled = false;
+    }
     load();
   });
 
@@ -407,6 +419,43 @@
     }
   }
 
+  async function runAiExpand() {
+    const id = selectedId();
+    if (!id) return;
+    aiBusy = true;
+    actionError = null;
+    actionMsg = null;
+    try {
+      const response = await aiExpandNode(documentId, id);
+      aiProposal = response.proposal;
+      actionMsg = "AI proposal ready - review before accepting.";
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : "AI expansion failed.";
+    } finally {
+      aiBusy = false;
+    }
+  }
+
+  async function acceptProposal() {
+    if (!aiProposal) return;
+    aiBusy = true;
+    try {
+      const result = await acceptAiProposal(documentId, aiProposal.node_id, aiProposal.children);
+      actionMsg = `Accepted ${result.accepted_count} node(s).`;
+      aiProposal = null;
+      await load();
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : "Could not accept proposal.";
+    } finally {
+      aiBusy = false;
+    }
+  }
+
+  function rejectProposal() {
+    aiProposal = null;
+    actionMsg = "Proposal rejected - nothing was added to the graph.";
+  }
+
   async function doRedo() {
     try {
       const result = await redoGraph(documentId);
@@ -508,6 +557,32 @@
             <button onclick={mergeInto}>Merge into…</button>
             <button onclick={deleteSelected} class="danger">Delete</button>
           </div>
+          {#if intelEnabled}
+            <div class="row">
+              <button onclick={runAiExpand} disabled={aiBusy} class="ai">
+                ✨ Expand with AI
+              </button>
+            </div>
+          {/if}
+          {#if aiProposal}
+            <div class="proposal">
+              <p class="proposal-title">AI proposed nodes</p>
+              <ul>
+                {#each aiProposal.children as child (child.label)}
+                  <li>
+                    <strong>{child.label}</strong>
+                    {#if child.evidence.length}
+                      <span class="evidence-note"> · {child.evidence.length} evidence ref(s)</span>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+              <div class="row">
+                <button onclick={acceptProposal} disabled={aiBusy}>Accept all</button>
+                <button onclick={rejectProposal} disabled={aiBusy}>Reject</button>
+              </div>
+            </div>
+          {/if}
         </div>
         {#if actionError}
           <div class="info error">{actionError}</div>
@@ -662,6 +737,30 @@
   }
   .info.error {
     color: #c62828;
+  }
+  .ai {
+    background: #6a1b9a;
+    color: #fff;
+    border-color: #6a1b9a;
+  }
+  .proposal {
+    border: 1px solid #ce93d8;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    background: #faf0ff;
+    font-size: 0.78rem;
+  }
+  .proposal-title {
+    margin: 0 0 0.25rem;
+    font-weight: 600;
+    color: #4a148c;
+  }
+  .proposal ul {
+    margin: 0.2rem 0 0.4rem;
+    padding-left: 1rem;
+  }
+  .evidence-note {
+    color: #777;
   }
   .status {
     padding: 2rem;

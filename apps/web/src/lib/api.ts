@@ -305,3 +305,39 @@ export function undoGraph(documentId: string): Promise<{ undone: string }> {
 export function redoGraph(documentId: string): Promise<{ redone: string }> {
   return post(`/api/v1/documents/${documentId}/graph/redo`);
 }
+
+export interface IntelStatus {
+  enabled: boolean;
+  node_expansion: { enabled: boolean };
+}
+
+export function getIntelStatus(): Promise<IntelStatus> {
+  return get("/api/v1/intelligence/status");
+}
+
+export interface IntelProposalChild {
+  label: string;
+  relationship: string;
+  description: string;
+  evidence: { chunk_id: string; page_number: number }[];
+}
+
+export async function aiExpandNode(
+  documentId: string,
+  nodeId: string
+): Promise<{ proposal: { node_id: string; children: IntelProposalChild[]; warnings: string[] } }> {
+  return post(
+    `/api/v1/intelligence/mindmap/expand?document_id=${encodeURIComponent(documentId)}&node_id=${encodeURIComponent(nodeId)}`
+  );
+}
+
+export async function acceptAiProposal(
+  documentId: string,
+  nodeId: string,
+  children: IntelProposalChild[]
+): Promise<{ accepted_count: number; created: { id: string; label: string }[]; errors: string[] }> {
+  return post(
+    `/api/v1/intelligence/mindmap/nodes/${encodeURIComponent(nodeId)}/accept?document_id=${encodeURIComponent(documentId)}`,
+    { children }
+  );
+}

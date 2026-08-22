@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
+from mindweaver.intelligence.config import IntelligenceConfig
+
 Environment = Literal["development", "testing", "production"]
 
 
@@ -155,6 +157,7 @@ class Settings(BaseSettings):
     chat: ChatConfig = Field(default_factory=ChatConfig)
     graph: GraphConfig = Field(default_factory=GraphConfig)
     mindmap: MindMapConfig = Field(default_factory=MindMapConfig)
+    intelligence: IntelligenceConfig = Field(default_factory=lambda: IntelligenceConfig())
     hardware_profile: HardwareProfile = "medium"
     tts: TTSConfig = Field(default_factory=TTSConfig)
     worker: WorkerConfig = Field(default_factory=WorkerConfig)

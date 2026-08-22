@@ -21,6 +21,7 @@ from mindweaver.api.routes.notebooks import router as notebooks_router
 from mindweaver.api.routes.search import router as search_router
 from mindweaver.config import Settings, get_settings
 from mindweaver.database import build_engine, init_database, make_session_factory
+from mindweaver.intelligence.routes import router as intelligence_router
 from mindweaver.logging_conf import setup_logging
 
 
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(jobs_router, prefix=f"{settings.app.api_v1_prefix}/jobs")
     app.include_router(search_router, prefix=f"{settings.app.api_v1_prefix}/search")
     app.include_router(notebooks_router, prefix=f"{settings.app.api_v1_prefix}/notebooks")
+    app.include_router(intelligence_router, prefix=f"{settings.app.api_v1_prefix}/intelligence")
     app.include_router(chat_router, prefix=f"{settings.app.api_v1_prefix}/chat")
     return app
 

@@ -2,15 +2,19 @@
 
 ## Status
 
-- [ ] Not started
-- [ ] Stage 0 complete
-- [ ] Stage 1 complete
-- [ ] Stage 2 complete
-- [ ] Stage 3 complete
-- [ ] Stage 4 complete
-- [ ] Stage 5 complete
-- [ ] Stage 6 complete
-- [ ] All tests passing
+- [x] Not started
+- [x] Stage 0 complete
+- [x] Stage 1 complete
+- [x] Stage 2 complete
+- [x] Stage 3 complete
+- [x] Stage 4 complete
+- [x] Stage 5 complete
+- [x] Stage 6 complete
+- [ ] Stage 7 complete (API: implemented; UI review pending)
+- [ ] Stage 8 complete (UI integration pending)
+- [x] Stage 9 complete (presets)
+- [x] Stage 10 complete (integration test)
+- [x] All tests passing
 
 ---
 
@@ -125,15 +129,19 @@ Below is a ready-to-save `add_feature.md` for your coding agent.
 
 ## Status
 
-- [ ] Not started
-- [ ] Stage 0 complete
-- [ ] Stage 1 complete
-- [ ] Stage 2 complete
-- [ ] Stage 3 complete
-- [ ] Stage 4 complete
-- [ ] Stage 5 complete
-- [ ] Stage 6 complete
-- [ ] All tests passing
+- [x] Not started
+- [x] Stage 0 complete
+- [x] Stage 1 complete
+- [x] Stage 2 complete
+- [x] Stage 3 complete
+- [x] Stage 4 complete
+- [x] Stage 5 complete
+- [x] Stage 6 complete
+- [ ] Stage 7 complete (API: implemented; UI review pending)
+- [ ] Stage 8 complete (UI integration pending)
+- [x] Stage 9 complete (presets)
+- [x] Stage 10 complete (integration test)
+- [x] All tests passing
 
 ---
 
