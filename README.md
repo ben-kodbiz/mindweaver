@@ -4,8 +4,10 @@ Local-first, open-source application for turning documents into an explorable kn
 
 ## Docs
 
-- `todoagent.md` — the build plan: 25 sequential stages (task source of truth).
+- **`docs/USER_MANUAL.md`** — how to use MindWeaver (no technical knowledge needed)
+- `todoagent.md` — the build plan: 22 sequential stages (task source of truth).
 - `architect.md` — system architecture reference.
+- `docs/CHANGELOG.md` — release history.
 - `AGENTS.md` — workflow rules for AI agents working in this repo.
 
 ## Layout

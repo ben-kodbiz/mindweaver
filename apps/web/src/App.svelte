@@ -9,6 +9,9 @@
   let documents = $state<DocumentInfo[]>([]);
   let error = $state<string | null>(null);
   let backendVersion = $state<string | null>(null);
+  let selectedFile = $state<File | null>(null);
+  let uploading = $state(false);
+  let uploadMessage = $state<string | null>(null);
 
   onMount(async () => {
     await refresh();
@@ -28,6 +31,67 @@
       error = null;
     } catch {
       error = "Could not load documents.";
+    }
+  }
+
+  function pickFile(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    selectedFile = input.files?.[0] ?? null;
+    uploadMessage = null;
+  }
+
+  async function upload() {
+    if (!selectedFile) return;
+    uploading = true;
+    uploadMessage = 'Reading your PDF…';
+    try {
+      const body = new FormData();
+      body.append('file', selectedFile);
+      const res = await fetch('/api/v1/documents', { method: 'POST', body });
+      if (res.status === 409) {
+        uploadMessage = 'That PDF is already in your library.';
+        return;
+      }
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(detail?.error?.message ?? `HTTP ${res.status}`);
+      }
+      uploadMessage = `Added "${selectedFile.name}".`;
+      selectedFile = null;
+      await refresh();
+    } catch {
+      uploadMessage = 'Sorry — that PDF could not be added. Is it a normal PDF file?';
+    } finally {
+      uploading = false;
+    }
+  }
+
+  function friendlyStatus(status: string): string {
+    const words: Record<string, string> = {
+      uploaded: "Added",
+      queued: "Waiting",
+      processing: "Reading",
+      ocr_required: "Needs OCR",
+      processing_ocr: "Reading scanned pages",
+      ready: "Ready",
+      failed: "Failed"
+    };
+    return words[status] ?? status;
+  }
+
+  let ocrBusy = $state<string | null>(null);
+
+  async function runOcr(doc: DocumentInfo) {
+    if (ocrBusy) return;
+    ocrBusy = doc.id;
+    uploadMessage = null;
+    try {
+      await fetch(`/api/v1/documents/${doc.id}/reprocess-ocr`, { method: 'POST' });
+      await refresh();
+    } catch {
+      uploadMessage = 'Could not read the scanned pages.';
+    } finally {
+      ocrBusy = null;
     }
   }
 
@@ -59,6 +123,19 @@
     {/if}
 
     <section>
+      <h2>Add a PDF</h2>
+      <div class="upload">
+        <input type="file" accept=".pdf,application/pdf" onchange={pickFile} />
+        <button onclick={upload} disabled={!selectedFile || uploading}>
+          {uploading ? 'Working…' : 'Add to library'}
+        </button>
+      </div>
+      {#if uploadMessage}
+        <p class="upload-msg">{uploadMessage}</p>
+      {/if}
+    </section>
+
+    <section>
       <h2>Documents</h2>
       {#if documents.length === 0}
         <p class="empty">
@@ -74,8 +151,20 @@
               <span class="doc-title">{doc.title || doc.original_filename}</span
               >
               <span class="doc-meta">
-                {doc.status} · {doc.page_count ?? "?"} pages
+                {friendlyStatus(doc.status)} · {doc.page_count ?? "?"} pages
               </span>
+              {#if doc.status === "ocr_required"}
+                <button
+                  class="ocr-btn"
+                  onclick={(event) => {
+                    event.stopPropagation();
+                    runOcr(doc);
+                  }}
+                  disabled={ocrBusy === doc.id}
+                >
+                  {ocrBusy === doc.id ? "Reading…" : "Read scanned pages"}
+                </button>
+              {/if}
             </button>
           </li>
         {/each}
@@ -107,6 +196,28 @@
   .empty {
     color: #888;
   }
+  .upload {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
+  .upload button {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #1565c0;
+    color: #fff;
+    cursor: pointer;
+  }
+  .upload button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .upload-msg {
+    color: #555;
+    font-size: 0.9rem;
+  }
   .docs {
     list-style: none;
     padding: 0;
@@ -131,6 +242,19 @@
   }
   .doc-title {
     font-weight: 600;
+  }
+  .ocr-btn {
+    margin-left: 0.6rem;
+    padding: 0.25rem 0.6rem;
+    border: none;
+    border-radius: 5px;
+    background: #f9a825;
+    color: #3e2723;
+    cursor: pointer;
+    font-size: 0.78rem;
+  }
+  .ocr-btn:disabled {
+    opacity: 0.6;
   }
   .doc-meta {
     color: #888;
