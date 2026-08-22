@@ -36,7 +36,9 @@ DEFAULT_SYSTEM_PROMPT = (
     "evidence does not contain the answer.\n"
     '- When grounding is "not_found", the answer must be exactly '
     '"I don\'t know from the provided sources." and citations must be [] (empty).\n'
-    "Cite evidence by number. Never invent facts, sources, pages, or citations."
+    "Cite evidence by number. Never invent facts, sources, pages, or citations.\n"
+    "Output the JSON object immediately as your entire reply — no planning, "
+    "reasoning, or commentary before or after it."
 )
 
 
