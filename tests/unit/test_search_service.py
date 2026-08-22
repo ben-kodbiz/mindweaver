@@ -142,3 +142,37 @@ def test_document_scoped_search(tmp_path):
 
     assert response.total == 1
     assert response.results[0].document_id == "doc_1"
+
+
+def test_keyword_scores_are_distinct_and_best_is_one(tmp_path):
+    engine = build_engine(_settings(tmp_path))
+    init_database(engine)
+    with session_scope(make_session_factory(engine)) as session:
+        from mindweaver.models import Document
+        from mindweaver.search.indexing import index_document_chunks
+
+        session.add(
+            Document(id="doc_1", title="x", original_filename="x.pdf", sha256="a" * 64, file_size=1)
+        )
+        session.flush()
+        records = [
+            _chunk("best", "design system scaling tokens tokens tokens", "Ch1", "S1", 1),
+            _chunk("weak", "the design is nice and the system runs", "Ch1", "S2", 2),
+            _chunk("other", "unrelated content about whales and oceans", "Ch2", "S3", 3),
+        ]
+        session.add_all(records)
+        session.flush()
+        index_document_chunks(
+            session, _settings(tmp_path), session.get(Document, "doc_1"), records
+        )
+
+        response = search(
+            session,
+            _settings(tmp_path),
+            "What is a design system for scaling tokens?",
+            limit=10,
+        )
+
+    by_id = {hit.chunk_id: hit for hit in response.results}
+    assert by_id["best"].keyword_score == 1.0
+    assert 0.0 < by_id["weak"].keyword_score < 1.0

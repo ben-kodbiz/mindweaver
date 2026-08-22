@@ -31,18 +31,40 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
 
 _WORD_RE = re.compile(r"[a-z0-9']+", re.IGNORECASE)
 
+# Ubiquitous function words carry almost no relevance signal; keeping them in
+# a relaxed OR query lets stopword-only matches crowd out real ones.
+_STOPWORDS = frozenset(
+    [
+        "a", "an", "the", "and", "or", "of", "to", "in",
+        "on", "for", "with", "is", "are", "was", "were", "be",
+        "been", "being", "am", "this", "that", "these", "those", "it",
+        "its", "as", "at", "by", "from", "into", "than", "then",
+        "there", "here", "what", "which", "who", "whom", "whose", "when",
+        "where", "why", "how", "do", "does", "did", "done", "doing",
+        "can", "could", "should", "would", "shall", "will", "may", "might",
+        "must", "have", "has", "had", "having", "i", "you", "he",
+        "she", "we", "they", "him", "her", "them", "his", "hers",
+        "their", "our", "your", "my", "me", "us", "if", "because",
+        "while", "about", "above", "after", "again", "against", "all", "any",
+        "before", "below", "between", "both", "down", "during", "each", "few",
+        "further", "more", "most", "no", "nor", "not", "off", "once",
+        "only", "other", "out", "own", "same", "some", "such", "through",
+        "too", "under", "until", "up", "very", "according", "also",
+    ]
+)
+
 
 def ensure_fts(engine: Engine) -> None:
     with engine.begin() as connection:
         connection.execute(text(_FTS_DDL))
 
 
-def build_match_query(query: str) -> str:
-    """Turn free text into a safe FTS5 MATCH expression (AND of quoted words)."""
+def build_match_query(query: str, *, operator: str = "AND") -> str:
+    """Turn free text into a safe FTS5 MATCH expression of quoted words."""
     words = _WORD_RE.findall(query or "")
     if not words:
         return ""
-    return " AND ".join(f'"{word}"' for word in words)
+    return f" {operator} ".join(f'"{word}"' for word in words)
 
 
 def index_document(session: Session, records: list[ChunkRecord]) -> None:
@@ -121,4 +143,26 @@ def keyword_search(
         .mappings()
         .all()
     )
+    if not rows:
+        # Natural-language questions rarely contain every term verbatim in one
+        # chunk, so a strict AND often matches nothing. Fall back to an OR of
+        # the content words: bm25 still ranks chunks matching more/rarer terms
+        # first, which recovers recall for conversational queries.
+        or_words = [w for w in _WORD_RE.findall(query) if w.lower() not in _STOPWORDS]
+        if not or_words:
+            return []
+        or_match = " OR ".join(f'"{word}"' for word in or_words)
+        params["match"] = or_match
+        rows = (
+            session.execute(
+                text(
+                    "SELECT chunk_id, bm25(chunks_fts, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0) AS score "
+                    f"FROM chunks_fts WHERE {' AND '.join(where)} "
+                    "ORDER BY score LIMIT :limit"
+                ),
+                params,
+            )
+            .mappings()
+            .all()
+        )
     return [{"chunk_id": row["chunk_id"], "score": float(row["score"])} for row in rows]

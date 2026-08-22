@@ -81,3 +81,36 @@ def test_keyword_search_empty_query(tmp_path):
     init_database(engine)
     with make_session_factory(engine)() as session:
         assert keyword_search(session, "  ") == []
+
+
+def test_keyword_search_natural_language_falls_back_to_or(tmp_path):
+    engine = build_engine(_settings(tmp_path))
+    init_database(engine)
+    with make_session_factory(engine)() as session:
+        index_document(
+            session,
+            [
+                _record("chunk_1", "A design system has to scale across many products."),
+            ],
+        )
+        session.commit()
+        question = "What is a design system according to this book exactly?"
+        hits = keyword_search(session, question, limit=5)
+        ids = [h["chunk_id"] for h in hits]
+        assert "chunk_1" in ids
+
+
+def test_keyword_search_prefers_and_matches_over_or(tmp_path):
+    engine = build_engine(_settings(tmp_path))
+    init_database(engine)
+    with make_session_factory(engine)() as session:
+        index_document(
+            session,
+            [
+                _record("both", "memory consolidation improves recall"),
+                _record("only_memory", "memory palace techniques"),
+            ],
+        )
+        session.commit()
+        hits = keyword_search(session, "memory consolidation", limit=5)
+        assert hits[0]["chunk_id"] == "both"

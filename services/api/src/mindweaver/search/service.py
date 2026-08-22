@@ -20,9 +20,17 @@ from mindweaver.search.vector import vector_search
 logger = logging.getLogger(__name__)
 
 
-def _bm25_to_similarity(score: float) -> float:
-    """Map a negative bm25 score to a 0..1 similarity (larger is better)."""
-    return 1.0 / (1.0 + abs(score))
+def _bm25_to_similarity(score: float, best: float) -> float:
+    """Map raw bm25 scores to a 0..1 similarity (larger is better).
+
+    bm25 is negative for real matches (more negative = better). Normalising
+    against the best hit of the query keeps the ordering strictly monotonic;
+    non-negative scores can only arise from ubiquitous-term matches and are
+    treated as irrelevant.
+    """
+    if best >= 0 or score >= 0:
+        return 0.0
+    return max(0.0, min(1.0, score / best))
 
 
 def search(
@@ -38,15 +46,16 @@ def search(
     cfg = settings.search
     limit = limit or cfg.default_limit
 
+    kw_hits = keyword_search(
+        session,
+        query,
+        document_id=document_id,
+        document_ids=document_ids,
+        limit=cfg.keyword_limit,
+    )
+    best = min((hit["score"] for hit in kw_hits), default=0.0)
     keyword_scores = {
-        hit["chunk_id"]: _bm25_to_similarity(hit["score"])
-        for hit in keyword_search(
-            session,
-            query,
-            document_id=document_id,
-            document_ids=document_ids,
-            limit=cfg.keyword_limit,
-        )
+        hit["chunk_id"]: _bm25_to_similarity(hit["score"], best) for hit in kw_hits
     }
 
     vector_scores: dict[str, float] = {}
