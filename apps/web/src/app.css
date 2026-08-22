@@ -1,7 +1,14 @@
+/* MindWeaver UI is a light-theme application.
+   Forcing the light colour scheme keeps every label readable even when the
+   visitor's browser is set to dark mode. */
 :root {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: #213547;
 }

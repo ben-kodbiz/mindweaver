@@ -507,6 +507,8 @@
     flex-direction: column;
     height: 100vh;
     font-family: system-ui, sans-serif;
+    background: #fafafa;
+    color: #213547;
   }
   header {
     display: flex;
@@ -520,6 +522,7 @@
     font-size: 1.1rem;
     margin: 0;
     flex: 1;
+    color: #1a1a1a;
   }
   .view-toggle {
     display: flex;
@@ -563,6 +566,8 @@
   .canvas-wrap {
     flex: 1;
     overflow: auto;
+    width: 100%;
+    background: #fafafa;
   }
   .canvas {
     width: max-content;
@@ -605,6 +610,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
   .source-panel h3 {
+    color: #1a1a1a;
     margin: 0 0 0.5rem;
     font-size: 0.95rem;
   }

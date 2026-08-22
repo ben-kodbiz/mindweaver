@@ -90,13 +90,29 @@ class PyPdfProcessor(DocumentProcessor):
         heading_state = _HeadingState()
         for page_no, page in enumerate(reader.pages, start=1):
             inspection = inspections[page_no - 1]
-            if inspection.content_type == PageContentType.SCANNED:
-                requires_ocr = requires_ocr or self.ocr_pipeline is None
+            needs_ocr = inspection.content_type in (
+                PageContentType.SCANNED,
+                PageContentType.EMPTY,
+            )
+            if needs_ocr:
                 if self.ocr_pipeline is None:
+                    if inspection.content_type == PageContentType.SCANNED:
+                        # image-only scan: mark it so the caller can request OCR
+                        requires_ocr = True
+                        pages[page_no - 1].extraction_method = "ocr"
+                        pages[page_no - 1].low_confidence = True
+                    continue
+
+                try:
+                    ocr_result = self.ocr_pipeline.ocr_page(path, document_id, page_no)
+                except Exception as exc:
+                    # One unreadable page must not fail the whole document.
+                    warnings.append(f"page {page_no} unreadable by OCR: {exc}")
                     pages[page_no - 1].extraction_method = "ocr"
+                    pages[page_no - 1].confidence = None
                     pages[page_no - 1].low_confidence = True
                     continue
-                ocr_result = self.ocr_pipeline.ocr_page(path, document_id, page_no)
+
                 pages[page_no - 1].extraction_method = "ocr"
                 pages[page_no - 1].confidence = ocr_result.confidence
                 pages[page_no - 1].low_confidence = ocr_result.low_confidence

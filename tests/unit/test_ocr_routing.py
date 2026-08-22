@@ -158,3 +158,57 @@ def test_ocr_cache_reuses_results(tmp_path, app_settings):
     assert fake2.calls == []
     assert result.requires_ocr is False
     assert any(b.text.startswith("recognised") for b in result.document.blocks)
+
+
+def test_single_unreadable_page_does_not_fail_document(tmp_path, app_settings):
+    """One corrupt/unreadable page must not sink the whole extraction."""
+    if not _pdfium_available():
+        pytest.skip("ocr extra not installed")
+    from mindweaver.database import build_engine, init_database, make_session_factory, session_scope
+    from mindweaver.models import Document
+
+    path = tmp_path / "scan.pdf"
+    path.write_bytes(make_image_only_pdf(2))
+
+    class FlakyProvider(OCRProvider):
+        name = "flaky"
+
+        def ocr_image(self, image: bytes, *, page_number: int, languages: list[str]):
+            if page_number == 1:
+                raise RuntimeError("detector exploded")
+            from mindweaver.ocr.base import OCRPageResult, OCRWord
+
+            return OCRPageResult(
+                page_number=page_number,
+                text=f"page {page_number} text",
+                confidence=0.9,
+                words=[OCRWord(text="ok", confidence=0.9)],
+                low_confidence=False,
+            )
+
+    hybrid = app_settings.model_copy(
+        update={"document_processor": DocumentProcessorConfig(backend="hybrid")}
+    )
+    engine = build_engine(app_settings)
+    init_database(engine)
+    with session_scope(make_session_factory(engine)) as session:
+        session.add(
+            Document(
+                id="d1",
+                title="scan",
+                original_filename="scan.pdf",
+                sha256="a" * 64,
+                file_size=1,
+            )
+        )
+        session.flush()
+        processor = get_processor(
+            hybrid, session=session, ocr_provider=FlakyProvider(), ocr_enabled=True
+        )
+        result = processor.extract(path, document_id="d1", filename="scan.pdf")
+
+    # page 1 failed but was isolated; page 2 still recognised
+    assert any("unreadable by OCR" in w for w in result.warnings)
+    assert result.document.pages[0].low_confidence is True
+    assert result.document.pages[1].confidence == 0.9
+    assert any(b.page_number == 2 for b in result.document.blocks)

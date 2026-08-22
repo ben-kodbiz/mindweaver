@@ -26,6 +26,10 @@ class OCRPageResult:
     low_confidence: bool = False
 
 
+class OCREngineError(Exception):
+    """The OCR engine failed on a specific image."""
+
+
 class OCRProvider(ABC):
     """Recognises text in a rendered page image."""
 

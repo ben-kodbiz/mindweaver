@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import * as pdfjsLib from "pdfjs-dist";
   import { TextLayer } from "pdfjs-dist";
   import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -39,10 +39,12 @@
       const data = await blob.arrayBuffer();
       doc = await pdfjsLib.getDocument({ data }).promise;
       pageCount = doc.numPages;
+      loading = false; // template mounts the <canvas>
+      await tick();
       await renderPage(page);
     } catch {
-      error = "Could not load the PDF.";
-    } finally {
+      error =
+        "Could not display this PDF in the browser. You can still download it from the library.";
       loading = false;
     }
   });
@@ -55,9 +57,18 @@
 
   async function renderPage(pageNumber: number) {
     if (!doc) return;
-    const pdfPage = await doc.getPage(pageNumber);
-    const viewport = pdfPage.getViewport({ scale });
+    // The canvas mounts only after `loading` flips; flush bindings first.
+    await tick();
     if (!canvasEl) return;
+    const pdfPage = await doc.getPage(pageNumber);
+    const baseViewport = pdfPage.getViewport({ scale: 1 });
+    // Cap very large pages so the browser canvas stays manageable.
+    const maxSide = 1600;
+    const effective = Math.min(
+      scale,
+      Math.max(0.4, maxSide / Math.max(baseViewport.width, baseViewport.height))
+    );
+    const viewport = pdfPage.getViewport({ scale: effective });
     canvasEl.width = viewport.width;
     canvasEl.height = viewport.height;
 
@@ -200,6 +211,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     background: #fff;
+    color: #213547;
     cursor: pointer;
   }
   .toolbar button:disabled {

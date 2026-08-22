@@ -563,6 +563,8 @@
   }
   select {
     font-size: 0.75rem;
+    background: #fff;
+    color: #213547;
   }
   input[type="search"] {
     padding: 0.25rem 0.45rem;
@@ -574,6 +576,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     background: #fff;
+    color: #213547;
     cursor: pointer;
     font-size: 0.78rem;
   }

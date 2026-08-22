@@ -54,7 +54,7 @@ make dev-api    # starts the program
 make dev-web    # opens the screen
 ```
 
-Then open your browser at: **http://localhost:5173**
+Then open your browser at: **http://localhost:5180**
 
 > Tip: if you started MindWeaver yourself and walked away, simply repeat those
 > two commands after turning your computer back on.
@@ -66,7 +66,49 @@ lost — all your books and notes stay saved.
 
 ---
 
-## 3. The Library — your home screen
+## 3. Turning on the AI features
+
+Some buttons — **Expand**, **Explain**, **Ask**, and the automatic concept
+extraction — are powered by a "thinking model" that must run on your computer.
+Out of the box MindWeaver starts in **demo mode**: every screen works, but
+those buttons return sample answers.
+
+To make them genuinely intelligent, connect a free local model once:
+
+### Step-by-step (using Ollama — recommended)
+
+1. **Install Ollama** — download it from [ollama.com](https://ollama.com) and
+   install like any normal program (Windows/macOS/Linux).
+2. **Download a model** — open a terminal and type:
+   ```sh
+   ollama pull llama3.1
+   ```
+   (~5 GB; smaller option: `ollama pull qwen2.5:7b`)
+3. **Tell MindWeaver which model to use** — open the file named `.env` in your
+   MindWeaver folder with any text editor and set these three lines:
+   ```text
+   MINDWEAVER_LLM__PROVIDER=ollama
+   MINDWEAVER_LLM__BASE_URL=http://localhost:11434
+   MINDWEAVER_LLM__MODEL=llama3.1
+   ```
+   (If `.env` doesn't exist yet, copy `.env.example` to `.env` first.)
+4. **Restart** the MindWeaver program (Ctrl+C, then `make dev-api` again).
+
+That's it. From now on **Explain**, **Expand**, **Ask**, summaries and quizzes
+use your own local model — private, offline, no subscription.
+
+### Other model servers
+
+Anything that speaks the OpenAI chat protocol works the same way — LM Studio,
+llama.cpp server, or a remote OpenAI-compatible endpoint. Just point
+`MINDWEAVER_LLM__PROVIDER` / `..._BASE_URL` / `..._MODEL` at it.
+
+> Not all features need this: adding PDFs, reading, searching, the mind map,
+> highlights and your personal notes work perfectly in demo mode.
+
+---
+
+## 4. The Library — your home screen
 
 When you open the address above you land on the **Library** screen. It shows:
 
@@ -80,7 +122,7 @@ MindWeaver is running properly.
 
 ---
 
-## 4. Adding a PDF
+## 5. Adding a PDF
 
 1. On the Library screen, find the **Add a PDF** section.
 2. Click the file chooser and pick any PDF from your computer.
@@ -111,7 +153,7 @@ name change:
 
 ---
 
-## 5. Opening a book — the Mind Map
+## 6. Opening a book — the Mind Map
 
 Click any document's name in the list. You arrive at the **mind map**: your
 book drawn as a tree.
@@ -128,7 +170,7 @@ remembers which page(s) it came from.
 
 ---
 
-## 6. Moving around the map
+## 7. Moving around the map
 
 | I want to… | Do this |
 |---|---|
@@ -145,7 +187,7 @@ the most important concepts per chapter rather than thousands of dots.
 
 ---
 
-## 7. Working with a selected idea
+## 8. Working with a selected idea
 
 Click any blue or purple node once. A **panel** appears in the corner showing
 what it is: its type, the chapter/section it came from, and the pages involved.
@@ -176,7 +218,7 @@ marked with a yellow highlight.
 
 ---
 
-## 8. Reading along in the original PDF
+## 9. Reading along in the original PDF
 
 When the PDF panel is open you can read the real book next to your map.
 
@@ -199,7 +241,7 @@ Click a node  →  press Open PDF  →  correct page opens  →  yellow highligh
 
 ---
 
-## 9. Turn any passage into part of your map
+## 10. Turn any passage into part of your map
 
 This is where MindWeaver becomes truly yours.
 
@@ -217,7 +259,7 @@ New additions appear in the graph view immediately and are treated as *yours*
 
 ---
 
-## 10. Graph view — see how ideas connect
+## 11. Graph view — see how ideas connect
 
 The mind map is a tree. Sometimes you want to see the **web**: which ideas
 influence which, what supports what, where two sources disagree.
@@ -251,7 +293,7 @@ screen, or **Reset focus** to see everything again.
 
 ---
 
-## 11. Make it yours — notes, colours and personal ideas
+## 12. Make it yours — notes, colours and personal ideas
 
 With a node selected in Graph view, the **edit panel** lets you annotate and
 restructure. Everything you do here survives even if the book is re-analysed
@@ -297,14 +339,14 @@ forward one step at a time — including merges and deletions.
 
 ---
 
-## 12. Going back to your library
+## 13. Going back to your library
 
 Press **← Documents** in the top-left corner at any time. Your position, zoom
 level and collapsed branches are remembered per book.
 
 ---
 
-## 13. Tips for best results
+## 14. Tips for best results
 
 - **Native digital PDFs work best.** Scans still work, but expect to press
   *Read scanned pages* and slightly lower accuracy.
@@ -318,21 +360,21 @@ level and collapsed branches are remembered per book.
 
 ---
 
-## 14. If something goes wrong
+## 15. If something goes wrong
 
 | Symptom | Likely cause & fix |
 |---|---|
 | *"Backend not reachable…"* on the home screen | The program isn't running. Ask whoever set it up to run `make dev-api`, then reload the page. |
 | Upload says the file could not be added | The file may be corrupted or password-protected. Remove the password (or re-save the PDF) and try again. |
 | Status stuck at *Needs OCR* | Press the orange **Read scanned pages** button. |
-| *Expand* does nothing | There was nothing genuinely new near that idea, or no AI model is configured. Everything else keeps working. |
-| *Explain* shows an error | The AI model isn't reachable. Other features are unaffected; ask your installer to check the model setting. |
+| *Expand* does nothing | There was nothing genuinely new near that idea, or no AI model is connected yet — see **chapter 3**. Everything else keeps working. |
+| *Explain* shows an error | The AI model isn't reachable. Follow **chapter 3** to connect one; other features are unaffected. |
 | A node disappeared | Did you press Undo too many times? Press **Redo** in Graph view. |
 | Yellow highlights missing in the PDF | That location is known only by page, not by coordinates. The page still opens correctly. |
 
 ---
 
-## 15. Small dictionary
+## 16. Small dictionary
 
 | Word | Meaning here |
 |---|---|

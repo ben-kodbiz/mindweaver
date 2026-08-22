@@ -44,7 +44,7 @@ make lint           # ruff check + eslint
 make typecheck      # mypy + svelte-check
 make check          # test + lint + typecheck + format-check
 make dev-api        # uvicorn on :8000
-make dev-web        # vite on :5173 (proxies /api -> :8000)
+make dev-web        # vite on :5180 (proxies /api -> :8000)
 ```
 
 ## Config & API conventions

@@ -25,7 +25,7 @@ docs/ scripts/    project docs and developer scripts
 ```sh
 make install       # uv sync + npm install
 make dev-api       # backend on http://localhost:8000
-make dev-web       # frontend on http://localhost:5173 (proxies /api to :8000)
+make dev-web       # frontend on http://localhost:5180 (proxies /api to :8000)
 ```
 
 ## Checks

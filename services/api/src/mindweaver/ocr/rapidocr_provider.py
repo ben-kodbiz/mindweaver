@@ -11,7 +11,7 @@ from io import BytesIO
 from typing import Any
 
 from mindweaver.config import Settings
-from mindweaver.ocr.base import OCRPageResult, OCRProvider, OCRWord
+from mindweaver.ocr.base import OCREngineError, OCRPageResult, OCRProvider, OCRWord
 
 _ENGINE_PARAMS = {
     "Det.engine_type": "torch",
@@ -43,9 +43,20 @@ class RapidOCRProvider(OCRProvider):
     def ocr_image(self, image: bytes, *, page_number: int, languages: list[str]) -> OCRPageResult:
         import numpy as np
         from PIL import Image as PILImage
+        from PIL import ImageOps
 
-        array = np.array(PILImage.open(BytesIO(image)).convert("RGB"))
-        output = self._ensure_engine()(array)
+        try:
+            pil: Any = PILImage.open(BytesIO(image))
+            pil = ImageOps.exif_transpose(pil).convert("RGB")
+            # Very large page images can overwhelm the detector; downscale.
+            max_side = 2200
+            if max(pil.size) > max_side:
+                ratio = max_side / max(pil.size)
+                pil = pil.resize((max(1, int(pil.width * ratio)), max(1, int(pil.height * ratio))))
+            array = np.asarray(pil)
+            output = self._ensure_engine()(array)
+        except Exception as exc:
+            raise OCREngineError(f"OCR engine failed: {exc}") from exc
 
         texts = list(output.txts) if output.txts is not None else []
         scores = [float(s) for s in output.scores] if output.scores is not None else []

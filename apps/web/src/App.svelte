@@ -147,25 +147,24 @@
       <ul class="docs">
         {#each documents as doc (doc.id)}
           <li>
-            <button class="doc" onclick={() => openMap(doc)}>
-              <span class="doc-title">{doc.title || doc.original_filename}</span
-              >
-              <span class="doc-meta">
-                {friendlyStatus(doc.status)} · {doc.page_count ?? "?"} pages
-              </span>
+            <div class="doc">
+              <button class="doc-open" onclick={() => openMap(doc)}>
+                <span class="doc-title">{doc.title || doc.original_filename}</span
+                >
+                <span class="doc-meta">
+                  {friendlyStatus(doc.status)} · {doc.page_count ?? "?"} pages
+                </span>
+              </button>
               {#if doc.status === "ocr_required"}
                 <button
                   class="ocr-btn"
-                  onclick={(event) => {
-                    event.stopPropagation();
-                    runOcr(doc);
-                  }}
+                  onclick={() => runOcr(doc)}
                   disabled={ocrBusy === doc.id}
                 >
                   {ocrBusy === doc.id ? "Reading…" : "Read scanned pages"}
                 </button>
               {/if}
-            </button>
+            </div>
           </li>
         {/each}
       </ul>
@@ -230,14 +229,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.7rem 1rem;
+    gap: 0.6rem;
+    padding: 0.4rem 0.4rem 0.4rem 0;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     background: #fff;
+  }
+  .doc-open {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
     cursor: pointer;
     text-align: left;
+    font: inherit;
+    color: inherit;
+    border-radius: 8px 0 0 8px;
   }
-  .doc:hover {
+  .doc-open:hover {
     background: #f4f7fb;
   }
   .doc-title {
