@@ -1,0 +1,15 @@
+{
+  "name": "mindweaver",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "web:dev": "npm run dev -w @mindweaver/web",
+    "web:build": "npm run build -w @mindweaver/web",
+    "web:check": "npm run check -w @mindweaver/web",
+    "web:lint": "npm run lint -w @mindweaver/web",
+    "web:format": "npm run format -w @mindweaver/web"
+  }
+}

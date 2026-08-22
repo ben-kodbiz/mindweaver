@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+.svelte-kit/
+
+# Data
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

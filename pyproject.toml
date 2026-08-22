@@ -1,0 +1,39 @@
+[tool.uv.workspace]
+members = ["services/*", "packages/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["services/api/src", "tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"services/api/src/mindweaver/api/routes/*.py" = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "docling.*",
+    "numpy",
+    "onnxruntime",
+    "pandas",
+    "PIL",
+    "pypdfium2",
+    "rapidocr.*",
+    "torch.*",
+]
+ignore_missing_imports = true

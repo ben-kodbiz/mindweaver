@@ -1,0 +1,5 @@
+"""MindWeaver core API package."""
+
+__version__ = "0.1.0"
+APP_NAME = "mindweaver"
+API_VERSION = "v1"
