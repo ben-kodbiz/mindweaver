@@ -15,7 +15,9 @@ picture of the main topics and ideas inside each document — and lets you:
 - **Jump straight** from an idea to the exact page it came from,
 - **Grow** the map yourself by highlighting passages,
 - **Add your own** notes, colours and personal ideas without ever changing the
-  original document.
+  original document,
+- Optionally switch on an **Intelligence Layer** that can *look at* tricky
+  pages and *propose* new map ideas for you to approve.
 
 Everything happens **on your own computer**. Your documents are never uploaded
 to the internet.
@@ -108,7 +110,62 @@ llama.cpp server, or a remote OpenAI-compatible endpoint. Just point
 
 ---
 
-## 4. The Library — your home screen
+## 4. The Intelligence Layer (optional advanced AI)
+
+MindWeaver can also carry an optional **Intelligence Layer** — extra AI
+capabilities for the harder work:
+
+- **✨ Expand with AI** — instead of growing a branch yourself, let the AI
+  *propose* new related ideas for a selected node, each backed by evidence
+  from the book.
+- **Vision analysis** — for pages the normal reader finds hard (diagrams,
+  tables, messy scans), the AI can *look at the page picture* and explain it.
+
+The Intelligence Layer is **off by default**, it never runs in the background,
+and it never changes your data on its own. Turning it off again (or removing
+it) leaves MindWeaver exactly as it was.
+
+### Enabling it (a one-time, slightly technical step)
+
+The Intelligence Layer needs a local server that speaks the **OpenAI chat
+protocol** and offers a *vision* model (one that can understand pictures).
+LM Studio or llama.cpp are common choices.
+
+1. Set up that server and load two models: a text model and a vision model.
+2. Open the `.env` file in your MindWeaver folder and add:
+   ```text
+   MINDWEAVER_INTELLIGENCE__ENABLED=true
+   ```
+3. Point the layer at your server (replace the example address with yours):
+   ```text
+   MINDWEAVER_INTELLIGENCE__TEXT__ENABLED=true
+   MINDWEAVER_INTELLIGENCE__TEXT__BASE_URL=http://localhost:1234/v1
+   MINDWEAVER_INTELLIGENCE__TEXT__MODEL=your-text-model
+
+   MINDWEAVER_INTELLIGENCE__VISION__ENABLED=true
+   MINDWEAVER_INTELLIGENCE__VISION__BASE_URL=http://localhost:1234/v1
+   MINDWEAVER_INTELLIGENCE__VISION__MODEL=your-vision-model
+   ```
+   (There are also shorter `MW_*` shortcuts: `MW_TEXT_MODEL_ENABLED`,
+   `MW_TEXT_MODEL_BASE_URL`, `MW_TEXT_MODEL_NAME`, and the `MW_VISION_*`
+   equivalents.)
+4. **Restart** the MindWeaver program.
+
+If you leave the `.env` lines off or set `MINDWEAVER_INTELLIGENCE__ENABLED=false`,
+nothing changes and no AI buttons appear.
+
+### How the AI is kept safe
+
+- The AI can only **read** information your book already contains. It cannot
+  edit your notes, delete anything, or touch files outside your documents.
+- Every idea it suggests comes as a **proposal for you to approve** — nothing
+  is added to your map without your say-so.
+- If the model server is unreachable or slow, MindWeaver simply reports it and
+  carries on; it never crashes your documents.
+
+---
+
+## 5. The Library — your home screen
 
 When you open the address above you land on the **Library** screen. It shows:
 
@@ -122,7 +179,7 @@ MindWeaver is running properly.
 
 ---
 
-## 5. Adding a PDF
+## 6. Adding a PDF
 
 1. On the Library screen, find the **Add a PDF** section.
 2. Click the file chooser and pick any PDF from your computer.
@@ -153,7 +210,7 @@ name change:
 
 ---
 
-## 6. Opening a book — the Mind Map
+## 7. Opening a book — the Mind Map
 
 Click any document's name in the list. You arrive at the **mind map**: your
 book drawn as a tree.
@@ -170,7 +227,7 @@ remembers which page(s) it came from.
 
 ---
 
-## 7. Moving around the map
+## 8. Moving around the map
 
 | I want to… | Do this |
 |---|---|
@@ -187,7 +244,7 @@ the most important concepts per chapter rather than thousands of dots.
 
 ---
 
-## 8. Working with a selected idea
+## 9. Working with a selected idea
 
 Click any blue or purple node once. A **panel** appears in the corner showing
 what it is: its type, the chapter/section it came from, and the pages involved.
@@ -218,7 +275,7 @@ marked with a yellow highlight.
 
 ---
 
-## 9. Reading along in the original PDF
+## 10. Reading along in the original PDF
 
 When the PDF panel is open you can read the real book next to your map.
 
@@ -241,7 +298,7 @@ Click a node  →  press Open PDF  →  correct page opens  →  yellow highligh
 
 ---
 
-## 10. Turn any passage into part of your map
+## 11. Turn any passage into part of your map
 
 This is where MindWeaver becomes truly yours.
 
@@ -259,7 +316,7 @@ New additions appear in the graph view immediately and are treated as *yours*
 
 ---
 
-## 11. Graph view — see how ideas connect
+## 12. Graph view — see how ideas connect
 
 The mind map is a tree. Sometimes you want to see the **web**: which ideas
 influence which, what supports what, where two sources disagree.
@@ -291,9 +348,27 @@ Type in the **Search** box; matching concepts light up orange and the view
 glides to them. Press **Focus** to keep only that concept's neighbourhood on
 screen, or **Reset focus** to see everything again.
 
+### ✨ Expand with AI (only when the Intelligence Layer is on)
+
+If the Intelligence Layer is enabled (chapter 4), the edit panel gains a purple
+**✨ Expand with AI** button:
+
+1. Select a node.
+2. Press **✨ Expand with AI**.
+3. MindWeaver's AI *looks at the book* around that idea and returns a list of
+   **proposed child ideas**, each tagged with how many pieces of evidence
+   back it.
+4. Review the list:
+   - **Accept all** — the proposed ideas are added to your map as *your*
+     personal nodes.
+   - **Reject** — nothing is added.
+
+The AI can only ever *propose*. Until you press Accept, your graph is
+completely unchanged.
+
 ---
 
-## 12. Make it yours — notes, colours and personal ideas
+## 13. Make it yours — notes, colours and personal ideas
 
 With a node selected in Graph view, the **edit panel** lets you annotate and
 restructure. Everything you do here survives even if the book is re-analysed
@@ -339,14 +414,14 @@ forward one step at a time — including merges and deletions.
 
 ---
 
-## 13. Going back to your library
+## 14. Going back to your library
 
 Press **← Documents** in the top-left corner at any time. Your position, zoom
 level and collapsed branches are remembered per book.
 
 ---
 
-## 14. Tips for best results
+## 15. Tips for best results
 
 - **Native digital PDFs work best.** Scans still work, but expect to press
   *Read scanned pages* and slightly lower accuracy.
@@ -357,10 +432,12 @@ level and collapsed branches are remembered per book.
   example red = disagree, green = mastered) and stick to it.
 - Trust but verify: purple concepts always carry their page numbers in the
   side panel — jump to the source before quoting anything.
+- Treat **AI proposals** as suggestions, not facts — check the cited evidence
+  before accepting.
 
 ---
 
-## 15. If something goes wrong
+## 16. If something goes wrong
 
 | Symptom | Likely cause & fix |
 |---|---|
@@ -369,12 +446,14 @@ level and collapsed branches are remembered per book.
 | Status stuck at *Needs OCR* | Press the orange **Read scanned pages** button. |
 | *Expand* does nothing | There was nothing genuinely new near that idea, or no AI model is connected yet — see **chapter 3**. Everything else keeps working. |
 | *Explain* shows an error | The AI model isn't reachable. Follow **chapter 3** to connect one; other features are unaffected. |
+| The **✨ Expand with AI** button is missing | The Intelligence Layer is off — see **chapter 4** to enable it. |
+| ✨ Expand with AI shows an error | The model server isn't running or the model name is wrong. Recheck the `.env` settings from **chapter 4** and restart. |
 | A node disappeared | Did you press Undo too many times? Press **Redo** in Graph view. |
 | Yellow highlights missing in the PDF | That location is known only by page, not by coordinates. The page still opens correctly. |
 
 ---
 
-## 16. Small dictionary
+## 17. Small dictionary
 
 | Word | Meaning here |
 |---|---|
@@ -385,6 +464,8 @@ level and collapsed branches are remembered per book.
 | **Personal node** | An idea you added yourself; never removed by re-analysis |
 | **Merge** | Folding two nodes into one, combining their notes and links |
 | **Graph** | The web-like view of relationships between ideas |
+| **Proposal** | An idea the AI suggests for your review — it becomes real only when you accept it |
+| **Intelligence Layer** | The optional AI layer that can read pages with its eyes and propose map ideas |
 
 ---
 
