@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -64,6 +64,10 @@ class LLMConfig(BaseModel):
     model: str = ""
     timeout_seconds: float = 300.0
     temperature: float = 0.2
+    # Extra JSON body merged into each chat-completions request (server/model
+    # specific knobs, e.g. ``{"chat_template_kwargs": {"enable_thinking":
+    # false}}`` for Qwen reasoning models served by LM Studio).
+    extra_body: dict[str, Any] = Field(default_factory=dict)
 
 
 class EmbeddingsConfig(BaseModel):
