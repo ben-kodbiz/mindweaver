@@ -31,6 +31,8 @@ def search(
     query: str,
     *,
     document_id: str | None = None,
+    document_ids: list[str] | None = None,
+    with_labels: bool = False,
     limit: int | None = None,
 ) -> SearchResponse:
     cfg = settings.search
@@ -38,7 +40,13 @@ def search(
 
     keyword_scores = {
         hit["chunk_id"]: _bm25_to_similarity(hit["score"])
-        for hit in keyword_search(session, query, document_id=document_id, limit=cfg.keyword_limit)
+        for hit in keyword_search(
+            session,
+            query,
+            document_id=document_id,
+            document_ids=document_ids,
+            limit=cfg.keyword_limit,
+        )
     }
 
     vector_scores: dict[str, float] = {}
@@ -52,6 +60,7 @@ def search(
                 query_vector,
                 provider.model_name,
                 document_id=document_id,
+                document_ids=document_ids,
                 limit=cfg.vector_limit,
             )
         }
@@ -106,7 +115,26 @@ def search(
     for rank, hit in enumerate(hits[:limit], start=1):
         hit.rank = rank
 
-    return SearchResponse(query=query, total=len(hits), results=hits[:limit])
+    results = hits[:limit]
+    if with_labels and results:
+        _attach_source_labels(session, results)
+
+    return SearchResponse(query=query, total=len(results), results=results)
+
+
+def _attach_source_labels(session: Session, results: list[SearchHit]) -> None:
+    from mindweaver.models import Document
+
+    ids = {hit.document_id for hit in results}
+    rows: list[tuple[str, str]] = [
+        (row[0], row[1])
+        for row in session.execute(
+            select(Document.id, Document.title).where(Document.id.in_(ids))
+        ).all()
+    ]
+    titles: dict[str, str] = {doc_id: title for doc_id, title in rows}
+    for hit in results:
+        hit.source_label = titles.get(hit.document_id)
 
 
 def _parse_section_path(value: str) -> list[str]:

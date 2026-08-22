@@ -15,8 +15,24 @@ from pathlib import Path
 from mindweaver.config import Settings
 
 
+class StorageKeyError(Exception):
+    pass
+
+
+def _safe_storage_key(storage_key: str) -> str:
+    """Reject path traversal: keys must be plain file names inside the dir."""
+    if not storage_key or "/" in storage_key or "\\" in storage_key or ".." in storage_key:
+        raise StorageKeyError(f"unsafe storage key: {storage_key!r}")
+    return storage_key
+
+
 def original_path(settings: Settings, storage_key: str) -> Path:
-    return settings.storage.originals_dir / storage_key
+    key = _safe_storage_key(storage_key)
+    resolved = (settings.storage.originals_dir / key).resolve()
+    root = settings.storage.originals_dir.resolve()
+    if not str(resolved).startswith(str(root)):
+        raise StorageKeyError(f"unsafe storage key: {storage_key!r}")
+    return resolved
 
 
 def delete_original(settings: Settings, storage_key: str) -> None:
@@ -25,6 +41,8 @@ def delete_original(settings: Settings, storage_key: str) -> None:
 
 
 def derived_dir(settings: Settings, document_id: str) -> Path:
+    if "/" in document_id or "\\" in document_id or ".." in document_id or not document_id:
+        raise StorageKeyError(f"unsafe document id: {document_id!r}")
     return settings.storage.derived_dir / document_id
 
 

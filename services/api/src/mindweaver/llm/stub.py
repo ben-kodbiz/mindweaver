@@ -39,6 +39,8 @@ class StubLLMProvider(LLMProvider):
                 break
 
         system_lower = system.lower()
+        if "generate study material" in system_lower:
+            return json.dumps(_learning_payload())
         if "expand a knowledge graph" in system_lower:
             return json.dumps(_expand_payload())
         if "explain a concept" in system_lower:
@@ -195,4 +197,23 @@ def _selection_payload() -> dict[str, Any]:
                 "note": "component of",
             },
         ],
+    }
+
+
+def _learning_payload() -> dict[str, Any]:
+    return {
+        "items": [
+            {
+                "text": "Memory encodes, stores and retrieves information.",
+                "term": "Memory",
+                "question": "What is memory?",
+                "answer": "The faculty for encoding, storing and retrieving information.",
+                "front": "Memory",
+                "back": "Encoding, storage and retrieval of information.",
+                "options": ["Memory", "Sleep", "Cues"],
+                "answer_index": 0,
+                "section": "Foundations",
+                "points": ["Encoding", "Storage", "Retrieval"],
+            }
+        ]
     }

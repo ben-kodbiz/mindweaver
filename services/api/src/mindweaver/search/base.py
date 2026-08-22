@@ -21,6 +21,7 @@ class SearchHit(BaseModel):
     retrieval_score: float
     rerank_score: float | None = None
     rank: int = 0
+    source_label: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

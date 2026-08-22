@@ -39,4 +39,8 @@ Configuration is documented in `.env.example` (prefix `MINDWEAVER_`, nested keys
 
 ## Status
 
-Stage 1 (Foundation) complete. See `todoagent.md` for the stage list.
+**v0.1.0** — all 22 build stages complete (desktop-only; audio/mobile dropped
+from scope). Milestones M0–M7 delivered: PDF pipeline → searchable book → RAG
+chat with citations → knowledge graph → interactive mind map → personal
+knowledge layer → multi-document notebooks → learning outputs. See
+`docs/CHANGELOG.md` and `todoagent.md` for the full stage list.

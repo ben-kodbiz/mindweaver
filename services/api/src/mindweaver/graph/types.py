@@ -65,6 +65,11 @@ class GraphNode(BaseModel):
     definition: str = ""
     source_chunks: list[str] = Field(default_factory=list)
     page_numbers: list[int] = Field(default_factory=list)
+    note: str = ""
+    color: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    is_important: bool = False
+    is_bookmarked: bool = False
     is_user_created: bool = False
 
 
@@ -75,6 +80,7 @@ class GraphEdge(BaseModel):
     note: str = ""
     source_chunks: list[str] = Field(default_factory=list)
     is_inference: bool = False
+    is_user_created: bool = False
 
 
 class GraphRead(BaseModel):

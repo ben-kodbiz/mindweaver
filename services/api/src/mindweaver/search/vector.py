@@ -59,11 +59,14 @@ def vector_search(
     model_name: str,
     *,
     document_id: str | None = None,
+    document_ids: list[str] | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
     """Return top-k ``{chunk_id, score}`` by cosine similarity."""
     statement = select(ChunkEmbedding).where(ChunkEmbedding.model_name == model_name)
-    if document_id is not None:
+    if document_ids:
+        statement = statement.where(ChunkEmbedding.document_id.in_(document_ids))
+    elif document_id is not None:
         statement = statement.where(ChunkEmbedding.document_id == document_id)
 
     query = np.asarray(query_vector, dtype=np.float32)

@@ -27,6 +27,9 @@ data/
 *.db-shm
 *.sqlite3
 
+# Rust / Tauri
+apps/desktop/src-tauri/target/
+
 # OS / editors
 .DS_Store
 .idea/

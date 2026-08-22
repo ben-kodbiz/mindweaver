@@ -35,6 +35,13 @@ def readiness(request: Request) -> JSONResponse | dict[str, object]:
     return {"status": "ready", "checks": checks}
 
 
+@router.get("/models", summary="Model gateway status")
+def models(request: Request) -> list[dict[str, str | None]]:
+    from mindweaver.gateway import provider_status
+
+    return provider_status(request.app.state.settings)
+
+
 @router.get("/version", summary="Application version")
 def version() -> dict[str, str]:
     return {"name": APP_NAME, "version": __version__, "api_version": API_VERSION}

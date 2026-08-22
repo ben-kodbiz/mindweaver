@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
+  import GraphView from "./GraphView.svelte";
   import PdfViewer from "./PdfViewer.svelte";
   import type { MindMap, MindMapNode } from "../lib/types";
   import {
@@ -40,6 +41,7 @@
   let focusIndex = $state(0);
   let matches = $state<string[]>([]);
 
+  let viewMode = $state<"map" | "graph">("map");
   let showPdf = $state(false);
   let pdfPage = $state(1);
   let pdfHighlights = $state<SourceRegion[]>([]);
@@ -218,8 +220,11 @@
           .join(", ");
       } else if (action === "evidence") {
         const evidence = await getNodeEvidence(documentId, node.id);
-        evidenceText = `pages: ${evidence.pages.join(", ") || "—"}\n` +
-          evidence.chunks.map((c) => `  p${c.page_start} ${c.section_path.join(" / ")}`).join("\n");
+        evidenceText =
+          `pages: ${evidence.pages.join(", ") || "—"}\n` +
+          evidence.chunks
+            .map((c) => `  p${c.page_start} ${c.section_path.join(" / ")}`)
+            .join("\n");
       } else if (action === "pdf") {
         const evidence = await getNodeEvidence(documentId, node.id);
         const targetPage = evidence.pages[0] ?? node.source?.pages?.[0] ?? 1;
@@ -227,8 +232,13 @@
         pdfHighlights = [];
         if (evidence.chunks.length) {
           try {
-            const source = await getChunkSource(documentId, evidence.chunks[0].chunk_id);
-            pdfHighlights = source.regions.filter((r) => r.page_number === targetPage);
+            const source = await getChunkSource(
+              documentId,
+              evidence.chunks[0].chunk_id,
+            );
+            pdfHighlights = source.regions.filter(
+              (r) => r.page_number === targetPage,
+            );
           } catch {
             pdfHighlights = [];
           }
@@ -248,7 +258,12 @@
     selectionBusy = true;
     selectionCandidates = null;
     try {
-      selectionCandidates = await addSelection(documentId, text, pageNumber, false);
+      selectionCandidates = await addSelection(
+        documentId,
+        text,
+        pageNumber,
+        false,
+      );
     } catch {
       actionError = "Could not extract concepts from the selection.";
     } finally {
@@ -263,9 +278,16 @@
     if (!selectionCandidates) return;
     selectionBusy = true;
     try {
-      const result = await addSelection(documentId, selectionText, selectionPage, true);
+      const result = await addSelection(
+        documentId,
+        selectionText,
+        selectionPage,
+        true,
+      );
       selectionCandidates = null;
-      actionError = result.added ? "Added to the mind map." : "Nothing new to add.";
+      actionError = result.added
+        ? "Added to the mind map."
+        : "Nothing new to add.";
       mindmap = await getMindMap(documentId);
       rebuild();
     } catch {
@@ -284,6 +306,16 @@
   <header>
     <button class="back" onclick={onBack}>← Documents</button>
     <h1>{title}</h1>
+    <div class="view-toggle">
+      <button
+        class:active={viewMode === "map"}
+        onclick={() => (viewMode = "map")}>Mind Map</button
+      >
+      <button
+        class:active={viewMode === "graph"}
+        onclick={() => (viewMode = "graph")}>Graph</button
+      >
+    </div>
     <div class="controls">
       <input
         type="search"
@@ -304,6 +336,8 @@
     <p class="status">Loading mind map…</p>
   {:else if error}
     <p class="status error">{error}</p>
+  {:else if mindmap && viewMode === "graph"}
+    <GraphView {documentId} />
   {:else if mindmap}
     <div class="canvas-wrap">
       <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -389,10 +423,18 @@
       <aside class="source-panel">
         <h3>{selectedNode.node.label}</h3>
         <div class="actions">
-          <button onclick={() => runAction("expand")} disabled={actionBusy}>Expand</button>
-          <button onclick={() => runAction("explain")} disabled={actionBusy}>Explain</button>
-          <button onclick={() => runAction("evidence")} disabled={actionBusy}>Evidence</button>
-          <button onclick={() => runAction("pdf")} disabled={actionBusy}>Open PDF</button>
+          <button onclick={() => runAction("expand")} disabled={actionBusy}
+            >Expand</button
+          >
+          <button onclick={() => runAction("explain")} disabled={actionBusy}
+            >Explain</button
+          >
+          <button onclick={() => runAction("evidence")} disabled={actionBusy}
+            >Evidence</button
+          >
+          <button onclick={() => runAction("pdf")} disabled={actionBusy}
+            >Open PDF</button
+          >
         </div>
         {#if actionError}
           <p class="action-msg">{actionError}</p>
@@ -435,7 +477,7 @@
           <button onclick={() => (showPdf = false)}>Close</button>
         </div>
         <PdfViewer
-          documentId={documentId}
+          {documentId}
           jumpToPage={pdfPage}
           highlights={pdfHighlights}
           onAddSelection={handleSelection}
@@ -448,7 +490,9 @@
                 <li>{node.label}</li>
               {/each}
             </ul>
-            <button onclick={confirmSelection} disabled={selectionBusy}>Add to mind map</button>
+            <button onclick={confirmSelection} disabled={selectionBusy}
+              >Add to mind map</button
+            >
             <button onclick={() => (selectionCandidates = null)}>Cancel</button>
           </div>
         {/if}
@@ -476,6 +520,21 @@
     font-size: 1.1rem;
     margin: 0;
     flex: 1;
+  }
+  .view-toggle {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .view-toggle button {
+    border: none;
+    border-radius: 0;
+    font-size: 0.8rem;
+  }
+  .view-toggle button.active {
+    background: #1565c0;
+    color: #fff;
   }
   .controls {
     display: flex;

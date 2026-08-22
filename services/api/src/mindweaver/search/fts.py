@@ -90,6 +90,7 @@ def keyword_search(
     query: str,
     *,
     document_id: str | None = None,
+    document_ids: list[str] | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
     """Return top keyword hits as ``{chunk_id, score}`` (score closer to 0 is better)."""
@@ -99,7 +100,12 @@ def keyword_search(
 
     where = ["chunks_fts MATCH :match"]
     params: dict[str, Any] = {"match": match, "limit": limit}
-    if document_id is not None:
+    if document_ids:
+        placeholders = ", ".join(f":doc_id_{i}" for i in range(len(document_ids)))
+        where.append(f"document_id IN ({placeholders})")
+        for i, doc_id in enumerate(document_ids):
+            params[f"doc_id_{i}"] = doc_id
+    elif document_id is not None:
         where.append("document_id = :document_id")
         params["document_id"] = document_id
 

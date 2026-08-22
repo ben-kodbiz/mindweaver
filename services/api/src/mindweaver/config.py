@@ -96,6 +96,9 @@ class GraphConfig(BaseModel):
     max_tokens: int = 1024
 
 
+HardwareProfile = Literal["low", "medium", "high"]
+
+
 class MindMapConfig(BaseModel):
     max_topics: int = 8
     max_concepts_per_topic: int = 3
@@ -152,6 +155,7 @@ class Settings(BaseSettings):
     chat: ChatConfig = Field(default_factory=ChatConfig)
     graph: GraphConfig = Field(default_factory=GraphConfig)
     mindmap: MindMapConfig = Field(default_factory=MindMapConfig)
+    hardware_profile: HardwareProfile = "medium"
     tts: TTSConfig = Field(default_factory=TTSConfig)
     worker: WorkerConfig = Field(default_factory=WorkerConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
@@ -163,6 +167,26 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _apply_hardware_profile(self) -> Settings:
+        """Presets tune provider choices for the target hardware."""
+        if self.hardware_profile == "low":
+            self.reranker.enabled = False
+            self.embeddings.provider = "local"
+            self.embeddings.dimension = min(self.embeddings.dimension, 256)
+            self.search.vector_weight = 0.3
+            self.search.fts_weight = 0.7
+            self.chat.evidence_limit = 4
+            self.graph.max_chunks = 20
+            self.worker.concurrency = 1
+        elif self.hardware_profile == "high":
+            self.embeddings.provider = "sentence-transformers"
+            self.search.fts_weight = 0.35
+            self.search.vector_weight = 0.65
+            self.chat.evidence_limit = 8
+            self.document_processor.backend = "docling"
+        return self
 
     @model_validator(mode="after")
     def _guard_production_secrets(self) -> Settings:

@@ -12,11 +12,14 @@ from mindweaver.models.document import (
 )
 from mindweaver.models.graph import (
     GraphEdgeRecord,
+    GraphHistoryEntry,
+    GraphHistoryState,
     GraphNodeRecord,
     GraphVersionRecord,
     NodeSourceRecord,
 )
 from mindweaver.models.mindmap import MindMapPreferencesRecord
+from mindweaver.models.notebook import Notebook, NotebookDocument
 
 __all__ = [
     "Base",
@@ -29,12 +32,16 @@ __all__ = [
     "DocumentStatus",
     "DocumentVersion",
     "GraphEdgeRecord",
+    "GraphHistoryEntry",
+    "GraphHistoryState",
     "GraphNodeRecord",
     "GraphVersionRecord",
     "JobStatus",
     "JobType",
     "MindMapPreferencesRecord",
     "NodeSourceRecord",
+    "Notebook",
+    "NotebookDocument",
     "OcrCache",
     "ProcessingJob",
 ]

@@ -123,6 +123,10 @@ class ProcessingJob(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=1)
+    checkpoint: Mapped[str] = mapped_column(Text, default="{}")
+    logs: Mapped[str] = mapped_column(Text, default="")
 
     document: Mapped[Document] = relationship(back_populates="jobs")
 

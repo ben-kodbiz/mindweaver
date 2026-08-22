@@ -33,6 +33,28 @@ def list_jobs(
     return [ProcessingJobRead.model_validate(job) for job in jobs]
 
 
+@router.post("/{job_id}/cancel", response_model=ProcessingJobRead)
+def cancel_job_endpoint(
+    request: Request, job_id: str, session: Session = Depends(_session)
+) -> ProcessingJobRead:
+    from mindweaver.jobs import cancel_job
+
+    job = cancel_job(session, job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
+    return ProcessingJobRead.model_validate(job)
+
+
+@router.get("/{job_id}/logs")
+def job_logs_endpoint(job_id: str, session: Session = Depends(_session)) -> dict[str, str]:
+    from mindweaver.jobs import get_job_logs
+
+    logs = get_job_logs(session, job_id)
+    if logs is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
+    return {"job_id": job_id, "logs": logs}
+
+
 @router.get("/{job_id}", response_model=ProcessingJobRead)
 def get_job(job_id: str, session: Session = Depends(_session)) -> ProcessingJobRead:
     job = session.get(ProcessingJob, job_id)

@@ -23,6 +23,11 @@ class GraphNodeRecord(Base):
     label: Mapped[str] = mapped_column(String(512))
     node_type: Mapped[str] = mapped_column(String(32))
     definition: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    color: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    tags: Mapped[str] = mapped_column(Text, default="[]")
+    is_important: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_bookmarked: Mapped[bool] = mapped_column(Boolean, default=False)
     is_user_created: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -62,6 +67,7 @@ class GraphEdgeRecord(Base):
     note: Mapped[str] = mapped_column(Text, default="")
     source_chunks: Mapped[str] = mapped_column(Text, default="[]")
     is_inference: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_user_created: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -77,3 +83,26 @@ class GraphVersionRecord(Base):
     operation: Mapped[str] = mapped_column(String(32))
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class GraphHistoryEntry(Base):
+    __tablename__ = "graph_history"
+    __table_args__ = (UniqueConstraint("document_id", "position", name="uq_graph_history_pos"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(128), default="")
+    snapshot: Mapped[str] = mapped_column(Text)
+
+
+class GraphHistoryState(Base):
+    __tablename__ = "graph_history_state"
+
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0)

@@ -65,8 +65,7 @@ def extract_selection(
             LLMMessage(
                 role="user",
                 content=(
-                    "Extract concepts and relationships from the following selection."
-                    f"\n\n{text}"
+                    f"Extract concepts and relationships from the following selection.\n\n{text}"
                 ),
             ),
         ],

@@ -25,7 +25,7 @@
   let doc = $state<pdfjsLib.PDFDocumentProxy | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(true);
-  let selectedText = $state('');
+  let selectedText = $state("");
   let container = $state<HTMLDivElement>();
   let canvasEl = $state<HTMLCanvasElement>();
   let textLayerEl = $state<HTMLDivElement>();
@@ -41,7 +41,7 @@
       pageCount = doc.numPages;
       await renderPage(page);
     } catch {
-      error = 'Could not load the PDF.';
+      error = "Could not load the PDF.";
     } finally {
       loading = false;
     }
@@ -63,7 +63,7 @@
 
     const renderContext = {
       canvasContext: canvasEl.getContext("2d")!,
-      viewport
+      viewport,
     } as never;
     await pdfPage.render(renderContext).promise;
 
@@ -74,31 +74,35 @@
       textLayerEl.style.width = `${viewport.width}px`;
       textLayerEl.style.height = `${viewport.height}px`;
       const textLayer = new TextLayer({
-        textContentSource: pdfPage.streamTextContent({ includeMarkedContent: true }),
+        textContentSource: pdfPage.streamTextContent({
+          includeMarkedContent: true,
+        }),
         container: textLayerEl,
-        viewport
+        viewport,
       });
       await textLayer.render();
     }
 
     renderHighlights(pageNumber, viewport, pdfPage);
-    selectedText = '';
+    selectedText = "";
   }
 
   function renderHighlights(
     pageNumber: number,
     viewport: pdfjsLib.PageViewport,
-    pdfPage: pdfjsLib.PDFPageProxy
+    pdfPage: pdfjsLib.PDFPageProxy,
   ) {
     if (!highlightEl) return;
     // eslint-disable-next-line svelte/no-dom-manipulating
-    highlightEl.innerHTML = '';
-    const regions = highlights.filter((h) => h.page_number === pageNumber && h.bbox);
+    highlightEl.innerHTML = "";
+    const regions = highlights.filter(
+      (h) => h.page_number === pageNumber && h.bbox,
+    );
     const pageHeight = pdfPage.view[3] - pdfPage.view[1];
     for (const region of regions) {
       if (!region.bbox) continue;
-      const box = document.createElement('div');
-      box.className = 'highlight';
+      const box = document.createElement("div");
+      box.className = "highlight";
       box.style.left = `${region.bbox.left * viewport.scale}px`;
       box.style.top = `${(pageHeight - region.bbox.top) * viewport.scale}px`;
       box.style.width = `${(region.bbox.right - region.bbox.left) * viewport.scale}px`;
@@ -114,20 +118,22 @@
   }
 
   function onTextSelect() {
-    const selection = window.getSelection()?.toString().trim() ?? '';
+    const selection = window.getSelection()?.toString().trim() ?? "";
     selectedText = selection;
   }
 
   function submitSelection() {
     if (!selectedText) return;
     onAddSelection(selectedText, page);
-    selectedText = '';
+    selectedText = "";
   }
 </script>
 
 <div class="viewer" role="application" aria-label="PDF viewer">
   <header class="toolbar">
-    <button onclick={() => gotoPage(page - 1)} disabled={page <= 1}>← Prev</button>
+    <button onclick={() => gotoPage(page - 1)} disabled={page <= 1}
+      >← Prev</button
+    >
     <input
       type="number"
       min="1"
@@ -138,11 +144,15 @@
       }}
     />
     <span>of {pageCount}</span>
-    <button onclick={() => gotoPage(page + 1)} disabled={page >= pageCount}>Next →</button>
+    <button onclick={() => gotoPage(page + 1)} disabled={page >= pageCount}
+      >Next →</button
+    >
     <button onclick={() => (scale = Math.min(3, scale * 1.15))}>+</button>
     <button onclick={() => (scale = Math.max(0.5, scale * 0.85))}>−</button>
     {#if selectedText}
-      <button class="add" onclick={submitSelection}>Add selection to mind map</button>
+      <button class="add" onclick={submitSelection}
+        >Add selection to mind map</button
+      >
     {/if}
   </header>
 
@@ -154,7 +164,12 @@
     <div class="page-wrap">
       <div class="page" bind:this={container}>
         <canvas bind:this={canvasEl}></canvas>
-        <div class="text-layer" bind:this={textLayerEl} onmouseup={onTextSelect} role="presentation"></div>
+        <div
+          class="text-layer"
+          bind:this={textLayerEl}
+          onmouseup={onTextSelect}
+          role="presentation"
+        ></div>
         <div class="highlights" bind:this={highlightEl}></div>
       </div>
     </div>

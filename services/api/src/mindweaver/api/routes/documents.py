@@ -27,7 +27,7 @@ from mindweaver.documents import (
     reprocess_with_ocr,
     upload_pdf,
 )
-from mindweaver.graph.types import GraphRead
+from mindweaver.graph.types import GraphNode, GraphRead
 from mindweaver.mindmap.types import (
     ExpandResult,
     ExplainResult,
@@ -155,11 +155,25 @@ def get_document_chunks(document_id: str, session: Session = Depends(_session)) 
 
 
 @router.get("/{document_id}/graph", response_model=GraphRead)
-def get_document_graph(document_id: str, session: Session = Depends(_session)) -> GraphRead:
+def get_document_graph(
+    document_id: str,
+    node_types: list[str] | None = Query(default=None),
+    relations: list[str] | None = Query(default=None),
+    focus_node_id: str | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=500),
+    session: Session = Depends(_session),
+) -> GraphRead:
     _document_or_404(session, document_id)
     from mindweaver.graph.service import get_graph
 
-    graph = get_graph(session, document_id)
+    graph = get_graph(
+        session,
+        document_id,
+        node_types=node_types,
+        relations=relations,
+        focus_node_id=focus_node_id,
+        limit=limit,
+    )
     if graph is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="graph not available yet")
     return graph
@@ -337,6 +351,312 @@ def mindmap_selection_endpoint(
         payload.page_number,
         confirm=payload.confirm,
     )
+
+
+@router.get("/{document_id}/graph/export")
+def export_document_graph(document_id: str, session: Session = Depends(_session)) -> FileResponse:
+    _document_or_404(session, document_id)
+    from mindweaver.graph.service import get_graph
+
+    graph = get_graph(session, document_id)
+    if graph is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="graph not available yet")
+
+    path = _export_graph_file(graph)
+    return FileResponse(
+        path,
+        media_type="application/json",
+        filename=f"mindweaver-graph-{document_id}.json",
+    )
+
+
+def _export_graph_file(graph: GraphRead) -> str:
+    import json as _json
+    import tempfile
+
+    payload = _json.dumps(graph.model_dump(), indent=2, default=str)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+        handle.write(payload)
+        return handle.name
+
+
+class PersonalNodeCreate(BaseModel):
+    label: str = Field(min_length=1, max_length=256)
+    node_type: str = Field(default="concept", max_length=32)
+    definition: str = Field(default="", max_length=2000)
+    note: str = Field(default="", max_length=4000)
+    color: str | None = Field(default=None, max_length=16)
+    tags: list[str] | None = None
+    is_important: bool = False
+    is_bookmarked: bool = False
+
+
+class NodeUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=256)
+    note: str | None = Field(default=None, max_length=4000)
+    color: str | None = Field(default=None, max_length=16)
+    tags: list[str] | None = None
+    is_important: bool | None = None
+    is_bookmarked: bool | None = None
+
+
+class ConnectionCreate(BaseModel):
+    source: str = Field(min_length=1)
+    target: str = Field(min_length=1)
+    relation: str = Field(default="related_to", max_length=32)
+    note: str = Field(default="", max_length=1000)
+
+
+class ConnectionDelete(BaseModel):
+    source: str
+    target: str
+    relation: str
+
+
+class MergeRequest(BaseModel):
+    into: str = Field(min_length=1)
+
+
+@router.post("/{document_id}/graph/nodes", response_model=GraphNode)
+def create_personal_node(
+    request: Request,
+    document_id: str,
+    payload: PersonalNodeCreate,
+    session: Session = Depends(_session),
+) -> GraphNode:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, add_personal_node
+
+    try:
+        node = add_personal_node(
+            session,
+            request.app.state.settings,
+            document,
+            label=payload.label,
+            node_type=payload.node_type,
+            definition=payload.definition,
+            note=payload.note,
+            color=payload.color,
+            tags=payload.tags or [],
+            is_important=payload.is_important,
+            is_bookmarked=payload.is_bookmarked,
+        )
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return GraphNode(**node.model_dump())
+
+
+@router.patch("/{document_id}/graph/nodes/{node_id}", response_model=GraphNode)
+def update_graph_node(
+    request: Request,
+    document_id: str,
+    node_id: str,
+    payload: NodeUpdate,
+    session: Session = Depends(_session),
+) -> GraphNode:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, update_node
+
+    try:
+        node = update_node(
+            session,
+            request.app.state.settings,
+            document,
+            node_id,
+            payload.model_dump(exclude_none=False),
+        )
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return GraphNode(**node.model_dump())
+
+
+@router.delete("/{document_id}/graph/nodes/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_graph_node(
+    request: Request, document_id: str, node_id: str, session: Session = Depends(_session)
+) -> None:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, delete_node
+
+    try:
+        delete_node(session, request.app.state.settings, document, node_id)
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/{document_id}/graph/edges")
+def create_connection_endpoint(
+    request: Request,
+    document_id: str,
+    payload: ConnectionCreate,
+    session: Session = Depends(_session),
+) -> dict[str, object]:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, create_connection
+
+    try:
+        return create_connection(
+            session,
+            request.app.state.settings,
+            document,
+            source=payload.source,
+            target=payload.target,
+            relation=payload.relation,
+            note=payload.note,
+        )
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.delete("/{document_id}/graph/edges", status_code=status.HTTP_204_NO_CONTENT)
+def remove_connection_endpoint(
+    request: Request,
+    document_id: str,
+    payload: ConnectionDelete,
+    session: Session = Depends(_session),
+) -> None:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, remove_connection
+
+    try:
+        remove_connection(
+            session,
+            request.app.state.settings,
+            document,
+            source=payload.source,
+            target=payload.target,
+            relation=payload.relation,
+        )
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/{document_id}/graph/nodes/{node_id}/merge", response_model=GraphNode)
+def merge_node_endpoint(
+    request: Request,
+    document_id: str,
+    node_id: str,
+    payload: MergeRequest,
+    session: Session = Depends(_session),
+) -> GraphNode:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, merge_nodes
+
+    try:
+        merged = merge_nodes(session, request.app.state.settings, document, node_id, payload.into)
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return GraphNode(**merged.model_dump())
+
+
+@router.post("/{document_id}/graph/undo")
+def undo_endpoint(
+    request: Request, document_id: str, session: Session = Depends(_session)
+) -> dict[str, object]:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, undo_last
+
+    try:
+        undone = undo_last(session, request.app.state.settings, document)
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return {"undone": undone}
+
+
+@router.post("/{document_id}/graph/redo")
+def redo_endpoint(
+    request: Request, document_id: str, session: Session = Depends(_session)
+) -> dict[str, object]:
+    document = _document_or_404(session, document_id)
+    from mindweaver.graph.user_edits import EditError, redo_next
+
+    try:
+        redone = redo_next(session, request.app.state.settings, document)
+    except EditError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return {"redone": redone}
+
+
+@router.post("/{document_id}/process")
+def process_document_async(
+    request: Request, document_id: str, session: Session = Depends(_session)
+) -> dict[str, object]:
+    """Run the full pipeline (metadata + extraction + chunking + graph) as a
+    tracked job with progress, checkpoints and cancellation."""
+    document = _document_or_404(session, document_id)
+    from mindweaver.documents import (
+        _chunk_if_usable,
+        run_document_extraction,
+        run_metadata_extraction,
+    )
+    from mindweaver.jobs import JobContext, submit_job
+    from mindweaver.models import JobType
+
+    settings = request.app.state.settings
+
+    def handler(ctx: JobContext) -> None:
+        ctx.append_log("metadata extraction")
+        run_metadata_extraction(ctx.session, settings, document)
+        ctx.set_progress(0.25, "metadata done")
+        ctx.checkpoint({"stage": "extraction"})
+        run_document_extraction(ctx.session, settings, document)
+        ctx.set_progress(0.6, "extraction done")
+        ctx.checkpoint({"stage": "chunking"})
+        _chunk_if_usable(ctx.session, settings, document)
+        ctx.set_progress(1.0, "pipeline complete")
+
+    job = submit_job(
+        session,
+        settings,
+        document,
+        JobType.DOCUMENT_EXTRACTION,
+        handler,
+        max_attempts=2,
+    )
+    return {"job_id": job.id, "status": job.status.value, "progress": job.progress}
+
+
+@router.get("/{document_id}/data-export")
+def export_document_data(
+    request: Request, document_id: str, session: Session = Depends(_session)
+) -> FileResponse:
+    """Full data export for one document (privacy right: take your data)."""
+    document = _document_or_404(session, document_id)
+    from mindweaver.chunking.service import chunk_record_to_model, list_chunks
+    from mindweaver.documents import load_canonical_document
+    from mindweaver.graph.service import get_graph
+
+    graph = get_graph(session, document_id)
+    chunks = [chunk_record_to_model(c) for c in list_chunks(session, document_id)]
+    payload = {
+        "document": DocumentRead.model_validate(document).model_dump(),
+        "canonical": load_canonical_document(request.app.state.settings, document),
+        "chunks": [c.model_dump() for c in chunks],
+        "graph": graph.model_dump() if graph else None,
+        "jobs": [
+            ProcessingJobRead.model_validate(j).model_dump()
+            for j in client_jobs(session, document_id)
+        ],
+    }
+    import json as _json
+    import tempfile
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as handle:
+        handle.write(_json.dumps(payload, indent=2, default=str))
+        export_path = handle.name
+    return FileResponse(
+        export_path,
+        media_type="application/json",
+        filename=f"mindweaver-export-{document_id}.json",
+    )
+
+
+def client_jobs(session: Session, document_id: str) -> list[ProcessingJob]:
+    from mindweaver.models import ProcessingJob
+
+    jobs = session.scalars(
+        select(ProcessingJob).where(ProcessingJob.document_id == document_id)
+    ).all()
+    return list(jobs)
 
 
 @router.get("/{document_id}/jobs", response_model=list[ProcessingJobRead])

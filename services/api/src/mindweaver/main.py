@@ -16,6 +16,8 @@ from mindweaver.api.routes.documents import router as documents_router
 from mindweaver.api.routes.echo import router as echo_router
 from mindweaver.api.routes.health import router as health_router
 from mindweaver.api.routes.jobs import router as jobs_router
+from mindweaver.api.routes.learning import router as learning_router
+from mindweaver.api.routes.notebooks import router as notebooks_router
 from mindweaver.api.routes.search import router as search_router
 from mindweaver.config import Settings, get_settings
 from mindweaver.database import build_engine, init_database, make_session_factory
@@ -54,8 +56,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router, prefix=settings.app.api_v1_prefix)
     app.include_router(echo_router, prefix=settings.app.api_v1_prefix)
     app.include_router(documents_router, prefix=f"{settings.app.api_v1_prefix}/documents")
+    app.include_router(learning_router, prefix=f"{settings.app.api_v1_prefix}/documents")
     app.include_router(jobs_router, prefix=f"{settings.app.api_v1_prefix}/jobs")
     app.include_router(search_router, prefix=f"{settings.app.api_v1_prefix}/search")
+    app.include_router(notebooks_router, prefix=f"{settings.app.api_v1_prefix}/notebooks")
     app.include_router(chat_router, prefix=f"{settings.app.api_v1_prefix}/chat")
     return app
 
