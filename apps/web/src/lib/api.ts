@@ -15,6 +15,16 @@ export function listDocuments(): Promise<{
   return get("/api/v1/documents");
 }
 
+export async function deleteDocument(documentId: string): Promise<void> {
+  const res = await fetch(`/api/v1/documents/${documentId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.error?.message ?? `HTTP ${res.status}`);
+  }
+}
+
 export function getMindMap(documentId: string): Promise<MindMap> {
   return get(`/api/v1/documents/${documentId}/mindmap`);
 }
@@ -324,20 +334,30 @@ export interface IntelProposalChild {
 
 export async function aiExpandNode(
   documentId: string,
-  nodeId: string
-): Promise<{ proposal: { node_id: string; children: IntelProposalChild[]; warnings: string[] } }> {
+  nodeId: string,
+): Promise<{
+  proposal: {
+    node_id: string;
+    children: IntelProposalChild[];
+    warnings: string[];
+  };
+}> {
   return post(
-    `/api/v1/intelligence/mindmap/expand?document_id=${encodeURIComponent(documentId)}&node_id=${encodeURIComponent(nodeId)}`
+    `/api/v1/intelligence/mindmap/expand?document_id=${encodeURIComponent(documentId)}&node_id=${encodeURIComponent(nodeId)}`,
   );
 }
 
 export async function acceptAiProposal(
   documentId: string,
   nodeId: string,
-  children: IntelProposalChild[]
-): Promise<{ accepted_count: number; created: { id: string; label: string }[]; errors: string[] }> {
+  children: IntelProposalChild[],
+): Promise<{
+  accepted_count: number;
+  created: { id: string; label: string }[];
+  errors: string[];
+}> {
   return post(
     `/api/v1/intelligence/mindmap/nodes/${encodeURIComponent(nodeId)}/accept?document_id=${encodeURIComponent(documentId)}`,
-    { children }
+    { children },
   );
 }

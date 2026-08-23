@@ -162,9 +162,7 @@ def test_keyword_scores_are_distinct_and_best_is_one(tmp_path):
         ]
         session.add_all(records)
         session.flush()
-        index_document_chunks(
-            session, _settings(tmp_path), session.get(Document, "doc_1"), records
-        )
+        index_document_chunks(session, _settings(tmp_path), session.get(Document, "doc_1"), records)
 
         response = search(
             session,

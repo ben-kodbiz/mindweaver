@@ -21,6 +21,8 @@ from sqlalchemy.engine import make_url
 
 from mindweaver.intelligence.config import IntelligenceConfig
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+
 Environment = Literal["development", "testing", "production"]
 
 
@@ -170,7 +172,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="MINDWEAVER_",
         env_nested_delimiter="__",
-        env_file=".env",
+        env_file=[str(_REPO_ROOT / ".env"), ".env"],
         env_file_encoding="utf-8",
         extra="ignore",
     )

@@ -14,7 +14,7 @@ from mindweaver.graph.types import GraphNode
 from mindweaver.llm.base import LLMMessage
 from mindweaver.llm.jsonutil import extract_json
 from mindweaver.llm.registry import get_llm_provider
-from mindweaver.mindmap.service import generate_mindmap
+from mindweaver.mindmap.service import generate_mindmap, resolve_action_node
 from mindweaver.mindmap.types import (
     EvidenceChunk,
     ExpandResult,
@@ -27,11 +27,8 @@ from mindweaver.search.base import SearchHit
 from mindweaver.search.service import search
 
 
-def _find_node(session: Session, document_id: str, node_id: str) -> GraphNode:
-    graph = get_graph(session, document_id)
-    if graph is None:
-        raise NodeNotFoundError(node_id)
-    node = next((n for n in graph.nodes if n.id == node_id), None)
+def _find_node(session: Session, settings: Settings, document: Document, node_id: str) -> GraphNode:
+    node = resolve_action_node(session, settings, document, node_id)
     if node is None:
         raise NodeNotFoundError(node_id)
     return node
@@ -92,7 +89,7 @@ def _chunk_to_evidence(chunks: list[ChunkRecord]) -> list[SearchHit]:
 def explain_node(
     session: Session, settings: Settings, document: Document, node_id: str
 ) -> ExplainResult:
-    node = _find_node(session, document.id, node_id)
+    node = _find_node(session, settings, document, node_id)
     node_chunks = _node_chunks(session, document.id, node)
 
     related = _related_concepts(session, settings, document, node)
@@ -169,7 +166,7 @@ def _json_path0(value: str) -> str | None:
 def node_evidence(
     session: Session, settings: Settings, document: Document, node_id: str
 ) -> NodeEvidence:
-    node = _find_node(session, document.id, node_id)
+    node = _find_node(session, settings, document, node_id)
     node_chunks = _node_chunks(session, document.id, node)
     pages = sorted(
         {page for chunk in node_chunks for page in range(chunk.page_start, chunk.page_end + 1)}
@@ -204,7 +201,7 @@ def _json_loads(value: str) -> list[str]:
 def related_nodes(
     session: Session, settings: Settings, document: Document, node_id: str
 ) -> list[RelatedNode]:
-    node = _find_node(session, document.id, node_id)
+    node = _find_node(session, settings, document, node_id)
     return _related_concepts(session, settings, document, node)
 
 
@@ -262,7 +259,7 @@ def ask_node(
     node_id: str,
     question: str,
 ) -> AnswerResult:
-    node = _find_node(session, document.id, node_id)
+    node = _find_node(session, settings, document, node_id)
     node_chunks = _node_chunks(session, document.id, node)
     extra_evidence = _chunk_to_evidence(node_chunks)
     return answer_question(

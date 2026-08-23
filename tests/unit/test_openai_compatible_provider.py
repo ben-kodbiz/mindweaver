@@ -31,9 +31,7 @@ def _provider(monkeypatch: pytest.MonkeyPatch, body: dict[str, Any], **llm_kwarg
         captured["timeout"] = timeout
         return _Response(body)
 
-    monkeypatch.setattr(
-        "mindweaver.llm.openai_compatible.httpx.post", _fake_post
-    )
+    monkeypatch.setattr("mindweaver.llm.openai_compatible.httpx.post", _fake_post)
     settings = Settings.model_construct()
     settings.llm.provider = "lmstudio"
     settings.llm.base_url = "http://localhost:1234"
@@ -45,9 +43,7 @@ def _provider(monkeypatch: pytest.MonkeyPatch, body: dict[str, Any], **llm_kwarg
 
 
 def test_complete_returns_content(monkeypatch: pytest.MonkeyPatch) -> None:
-    body = {
-        "choices": [{"message": {"content": '{"answer": "hi"}'}, "finish_reason": "stop"}]
-    }
+    body = {"choices": [{"message": {"content": '{"answer": "hi"}'}, "finish_reason": "stop"}]}
     provider, _ = _provider(monkeypatch, body)
     result = provider.complete([LLMMessage(role="user", content="q")])
     assert result == '{"answer": "hi"}'
@@ -57,7 +53,7 @@ def test_complete_falls_back_to_reasoning_content(monkeypatch: pytest.MonkeyPatc
     body = {
         "choices": [
             {
-                "message": {"content": "", "reasoning_content": "thinking... {\"a\": 1}"},
+                "message": {"content": "", "reasoning_content": 'thinking... {"a": 1}'},
                 "finish_reason": "length",
             }
         ]

@@ -4,7 +4,7 @@
 PYPROJECT := services/api
 
 .PHONY: install test test-unit test-integration lint format typecheck \
-        dev-api dev-web check precommit-install
+        dev dev-api dev-web check precommit-install
 
 install:
 	uv sync --project $(PYPROJECT)
@@ -35,10 +35,17 @@ typecheck:
 	uv run --project $(PYPROJECT) mypy $(PYPROJECT)/src
 	npm run web:check
 
+dev:
+	bash dev.sh
+
 dev-api:
+	@old=$$(lsof -ti :8000 2>/dev/null || true); \
+	if [ -n "$$old" ]; then kill $$old 2>/dev/null; sleep 1; fi
 	cd $(PYPROJECT) && uv run uvicorn mindweaver.main:app --reload --port 8000
 
 dev-web:
+	@old=$$(lsof -ti :5180 2>/dev/null || true); \
+	if [ -n "$$old" ]; then kill $$old 2>/dev/null || true; sleep 1; fi
 	npm run web:dev
 
 check: test lint typecheck format-check

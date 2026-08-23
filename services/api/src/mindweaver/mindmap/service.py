@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from mindweaver.chunking.service import list_chunks
 from mindweaver.config import MindMapConfig, Settings
 from mindweaver.document_model import CanonicalDocument
-from mindweaver.graph.types import GraphNode, GraphRead
+from mindweaver.graph.types import GraphNode, GraphNodeType, GraphRead
 from mindweaver.mindmap.types import MindMap, MindMapNode, NodeSourceInfo
 from mindweaver.models import ChunkRecord, Document, MindMapPreferencesRecord
 
@@ -216,6 +216,73 @@ def generate_mindmap(session: Session, settings: Settings, document: Document) -
     chunk_chapter_map = _chunk_chapter_map(list_chunks(session, document.id))
     return build_mindmap(
         document, canonical, graph, settings.mindmap, chunk_chapter_map=chunk_chapter_map
+    )
+
+
+def find_view_node(root: MindMapNode, node_id: str) -> MindMapNode | None:
+    """Depth-first search for ``node_id`` in the mind map view tree."""
+    if root.id == node_id:
+        return root
+    for child in root.children:
+        found = find_view_node(child, node_id)
+        if found is not None:
+            return found
+    return None
+
+
+def resolve_action_node(
+    session: Session,
+    settings: Settings,
+    document: Document,
+    node_id: str,
+) -> GraphNode | None:
+    """Resolve ``node_id`` to an actionable node.
+
+    Knowledge-graph nodes win. Structural mind-map nodes (``topic:<slug>``,
+    ``doc:<id>``) exist only in the view — never in the graph — so they are
+    wrapped in a synthetic graph node whose source chunks come from the view
+    metadata or, failing that, a label search (documents with weak section
+    provenance have no chapter mapping to lean on).
+    """
+    from mindweaver.graph.service import get_graph
+    from mindweaver.search.service import search
+
+    graph = get_graph(session, document.id)
+    if graph is not None:
+        for node in graph.nodes:
+            if node.id == node_id:
+                return node
+
+    mindmap = generate_mindmap(session, settings, document)
+    if mindmap is None:
+        return None
+    view_node = find_view_node(mindmap.root, node_id)
+    if view_node is None:
+        return None
+
+    chunks = list_chunks(session, document.id)
+    chunk_ids = list(view_node.source.chunk_ids) if view_node.source else []
+    if not chunk_ids:
+        retrieved = search(
+            session,
+            settings,
+            view_node.label,
+            document_id=document.id,
+            limit=max(settings.chat.evidence_limit, 5),
+        )
+        chunk_ids = [hit.chunk_id for hit in retrieved.results]
+
+    pages = set(view_node.source.pages) if view_node.source else set()
+    for chunk in chunks:
+        if chunk.chunk_id in chunk_ids:
+            pages.update(range(chunk.page_start, chunk.page_end + 1))
+
+    return GraphNode(
+        id=view_node.id,
+        label=view_node.label,
+        type=GraphNodeType.TOPIC,
+        source_chunks=chunk_ids,
+        page_numbers=sorted(pages),
     )
 
 

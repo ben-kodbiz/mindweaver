@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import MindMap from "./components/MindMap.svelte";
   import type { DocumentInfo } from "./lib/types";
-  import { listDocuments } from "./lib/api";
+  import { listDocuments, deleteDocument } from "./lib/api";
 
   let view = $state<"documents" | "map">("documents");
   let currentDocument = $state<DocumentInfo | null>(null);
@@ -103,6 +103,17 @@
     view = "map";
   }
 
+  async function remove(doc: DocumentInfo) {
+    const name = doc.title || doc.original_filename;
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteDocument(doc.id);
+      documents = documents.filter((d) => d.id !== doc.id);
+    } catch {
+      uploadMessage = "Could not delete the document.";
+    }
+  }
+
   function backToList() {
     view = "documents";
     refresh();
@@ -168,6 +179,13 @@
                   {ocrBusy === doc.id ? "Reading…" : "Read scanned pages"}
                 </button>
               {/if}
+              <button
+                class="doc-delete"
+                onclick={() => remove(doc)}
+                title="Delete"
+              >
+                &times;
+              </button>
             </div>
           </li>
         {/each}
@@ -275,5 +293,19 @@
   .doc-meta {
     color: #888;
     font-size: 0.85rem;
+  }
+  .doc-delete {
+    padding: 0.25rem 0.55rem;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .doc-delete:hover {
+    background: #fdecea;
+    color: #c62828;
   }
 </style>

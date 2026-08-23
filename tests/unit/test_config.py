@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 
 def test_default_config_is_valid():
-    settings = Settings()
+    settings = Settings(_env_file=None)
     assert settings.app.environment == "development"
     assert settings.app.api_v1_prefix == "/api/v1"
     assert settings.database.url.startswith("sqlite")

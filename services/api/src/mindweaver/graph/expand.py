@@ -73,6 +73,12 @@ def expand_node(
         raise NodeNotFoundError(node_id)
     node = next((n for n in graph.nodes if n.id == node_id), None)
     if node is None:
+        # Structural mind-map nodes (topic:<slug>, doc:<id>) exist only in the
+        # view, not in the graph — resolve them through the mind map service.
+        from mindweaver.mindmap.service import resolve_action_node
+
+        node = resolve_action_node(session, settings, document, node_id)
+    if node is None:
         raise NodeNotFoundError(node_id)
 
     chunks = list_chunks(session, document.id)
@@ -95,18 +101,49 @@ def expand_node(
         raise GraphExtractionError("LLM returned invalid JSON for node expansion")
 
     known_labels = {existing.label.lower(): [existing.id] for existing in graph.nodes}
+    existing_ids = {existing.id for existing in graph.nodes}
+    existing_edges = {(edge.source, edge.target, edge.relation.value) for edge in graph.edges}
+    if node.id not in existing_ids:
+        # Focus node came from the mind map view; make its label resolvable
+        # so LLM relations can anchor onto it.
+        known_labels.setdefault(node.label.lower(), []).insert(0, node.id)
+
     new_nodes, new_edges, warnings = normalize_graph(
         payload, document.id, context, known_labels=known_labels
     )
 
-    existing_ids = {existing.id for existing in graph.nodes}
-    existing_edges = {(edge.source, edge.target, edge.relation.value) for edge in graph.edges}
     added_nodes = [candidate for candidate in new_nodes if candidate.id not in existing_ids]
     added_edges = [
         candidate
         for candidate in new_edges
         if (candidate.source, candidate.target, candidate.relation.value) not in existing_edges
     ]
+
+    # Referential integrity: persist the view-resolved focus node when new
+    # edges anchor onto it; drop edges that still reference unknown nodes.
+    resolved_ids = {existing.id for existing in graph.nodes} | {
+        candidate.id for candidate in added_nodes
+    }
+    unresolved = {
+        endpoint
+        for edge in added_edges
+        for endpoint in (edge.source, edge.target)
+        if endpoint not in resolved_ids
+    }
+    for unknown_id in sorted(unresolved):
+        if unknown_id == node.id:
+            added_nodes.insert(0, node)
+            resolved_ids.add(node.id)
+    kept_edges: list[GraphEdge] = []
+    for edge in added_edges:
+        if edge.source in resolved_ids and edge.target in resolved_ids:
+            kept_edges.append(edge)
+        else:
+            warnings.append(
+                f"edge {edge.source} -{edge.relation.value}-> {edge.target} "
+                "dropped: unknown endpoint"
+            )
+    added_edges = kept_edges
 
     version = graph.version
     if added_nodes or added_edges:

@@ -70,7 +70,15 @@
   let actionMsg = $state<string | null>(null);
   let actionError = $state<string | null>(null);
   let intelEnabled = $state(false);
-  let aiProposal = $state<{ node_id: string; children: { label: string; relationship: string; description: string; evidence: { chunk_id: string; page_number: number }[] }[] } | null>(null);
+  let aiProposal = $state<{
+    node_id: string;
+    children: {
+      label: string;
+      relationship: string;
+      description: string;
+      evidence: { chunk_id: string; page_number: number }[];
+    }[];
+  } | null>(null);
   let aiBusy = $state(false);
 
   let selectedNodeTypes = $state<string[]>([...ALL_NODE_TYPES]);
@@ -440,12 +448,17 @@
     if (!aiProposal) return;
     aiBusy = true;
     try {
-      const result = await acceptAiProposal(documentId, aiProposal.node_id, aiProposal.children);
+      const result = await acceptAiProposal(
+        documentId,
+        aiProposal.node_id,
+        aiProposal.children,
+      );
       actionMsg = `Accepted ${result.accepted_count} node(s).`;
       aiProposal = null;
       await load();
     } catch (e) {
-      actionError = e instanceof Error ? e.message : "Could not accept proposal.";
+      actionError =
+        e instanceof Error ? e.message : "Could not accept proposal.";
     } finally {
       aiBusy = false;
     }
@@ -572,14 +585,20 @@
                   <li>
                     <strong>{child.label}</strong>
                     {#if child.evidence.length}
-                      <span class="evidence-note"> · {child.evidence.length} evidence ref(s)</span>
+                      <span class="evidence-note">
+                        · {child.evidence.length} evidence ref(s)</span
+                      >
                     {/if}
                   </li>
                 {/each}
               </ul>
               <div class="row">
-                <button onclick={acceptProposal} disabled={aiBusy}>Accept all</button>
-                <button onclick={rejectProposal} disabled={aiBusy}>Reject</button>
+                <button onclick={acceptProposal} disabled={aiBusy}
+                  >Accept all</button
+                >
+                <button onclick={rejectProposal} disabled={aiBusy}
+                  >Reject</button
+                >
               </div>
             </div>
           {/if}

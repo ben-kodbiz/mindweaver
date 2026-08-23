@@ -54,9 +54,7 @@ def search(
         limit=cfg.keyword_limit,
     )
     best = min((hit["score"] for hit in kw_hits), default=0.0)
-    keyword_scores = {
-        hit["chunk_id"]: _bm25_to_similarity(hit["score"], best) for hit in kw_hits
-    }
+    keyword_scores = {hit["chunk_id"]: _bm25_to_similarity(hit["score"], best) for hit in kw_hits}
 
     vector_scores: dict[str, float] = {}
     provider = get_embedding_provider(settings)
