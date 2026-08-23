@@ -29,6 +29,7 @@ class GraphNodeRecord(Base):
     is_important: Mapped[bool] = mapped_column(Boolean, default=False)
     is_bookmarked: Mapped[bool] = mapped_column(Boolean, default=False)
     is_user_created: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_accepted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow

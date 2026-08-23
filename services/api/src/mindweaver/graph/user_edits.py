@@ -112,6 +112,7 @@ def add_personal_node(
     tags: list[str] | None = None,
     is_important: bool = False,
     is_bookmarked: bool = False,
+    ai_accepted: bool = False,
 ) -> GraphNode:
     if not label.strip():
         raise EditError("label must not be empty")
@@ -140,6 +141,7 @@ def add_personal_node(
         is_important=is_important,
         is_bookmarked=is_bookmarked,
         is_user_created=True,
+        ai_accepted=ai_accepted,
     )
     session.add(record)
     session.flush()
@@ -407,4 +409,5 @@ def _to_node(record: GraphNodeRecord, source_chunks: list[str]) -> GraphNode:
         is_important=record.is_important,
         is_bookmarked=record.is_bookmarked,
         is_user_created=record.is_user_created,
+        ai_accepted=getattr(record, "ai_accepted", False),
     )

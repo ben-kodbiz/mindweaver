@@ -91,7 +91,9 @@ def test_disabled_by_default(client):
 
 def test_expand_disabled_returns_flagged_error(client):
     doc = _upload(client)
-    resp = client.post(f"/api/v1/intelligence/mindmap/expand?document_id={doc['id']}")
+    resp = client.post(
+        f"/api/v1/intelligence/mindmap/expand?document_id={doc['id']}&node_id=test-node"
+    )
     assert resp.status_code == 409
     assert "disabled" in resp.json()["error"]["message"].lower()
 
@@ -188,3 +190,38 @@ def test_e2e_expand_and_accept(intel_client):
     final_graph = intel_client.get(f"/api/v1/documents/{doc['id']}/graph").json()
     labels = {n["label"] for n in final_graph["nodes"]}
     assert "AI Proposed Concept" in labels
+
+
+# --- regression: intelligence completely disabled ---
+
+
+def test_vision_analyze_disabled_returns_409(client):
+    doc = _upload(client)
+    resp = client.post(
+        "/api/v1/intelligence/vision/analyze",
+        json={"document_id": doc["id"], "page_number": 1},
+    )
+    assert resp.status_code == 409
+    assert "disabled" in resp.json()["error"]["message"].lower()
+
+
+def test_accept_proposal_disabled_returns_409(client):
+    doc = _upload(client)
+    resp = client.post(
+        "/api/v1/intelligence/mindmap/nodes/topic:test/accept?document_id=" + doc["id"],
+        json={"children": [{"label": "x"}]},
+    )
+    assert resp.status_code == 409
+    assert "disabled" in resp.json()["error"]["message"].lower()
+
+
+def test_health_endpoint_disabled(client):
+    resp = client.get("/api/v1/intelligence/health")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["enabled"] is False
+
+
+def test_no_intelligence_gateway_by_default(client):
+    """Gateway must not be mounted unless explicitly enabled."""
+    assert getattr(client.app.state, "intelligence_gateway", None) is None

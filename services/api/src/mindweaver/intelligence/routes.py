@@ -62,6 +62,24 @@ def status_endpoint(request: Request) -> dict[str, object]:
     }
 
 
+@router.get("/health")
+def health_endpoint(request: Request) -> dict[str, Any]:
+    """Runtime health check — probes model endpoints for reachability."""
+    config = _intel_config(request)
+    if not config.enabled:
+        return {"enabled": False, "text": {}, "vision": {}}
+
+    gateway_obj = getattr(request.app.state, "intelligence_gateway", None)
+    if gateway_obj is None:
+        return {"enabled": True, "text": {"reachable": False}, "vision": {"reachable": False}}
+
+    from mindweaver.intelligence.gateway import IntelligenceGateway
+
+    if isinstance(gateway_obj, IntelligenceGateway):
+        return {"enabled": True, **gateway_obj.health_check()}
+    return {"enabled": True, "text": {}, "vision": {}}
+
+
 @router.get("/models")
 def models_endpoint(request: Request) -> dict[str, object]:
     config = _intel_config(request)
@@ -117,24 +135,17 @@ def vision_analyze_endpoint(
     return {"analyzed": True, "interpretation": interpretation.to_dict()}
 
 
-class ExpansionChildIn(BaseModel):
-    label: str
-    relationship: str = "related"
-    description: str = ""
-    evidence: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class ExpandRequest(BaseModel):
-    node_id: str = Field(min_length=1)
-
-
 @router.post("/mindmap/expand")
 def mindmap_expand_endpoint(
     request: Request,
     document_id: str,
+    node_id: str,
     session: Session = Depends(_session),
 ) -> dict[str, object]:
-    """Return an AI expansion PROPOSAL. Nothing enters the graph here."""
+    """Return an AI expansion PROPOSAL. Nothing enters the graph here.
+
+    Both ``document_id`` and ``node_id`` are query parameters (empty POST body).
+    """
     config = _intel_config(request)
     if not config.enabled or not config.node_expansion.enabled:
         raise _Disabled()
@@ -145,7 +156,6 @@ def mindmap_expand_endpoint(
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="document not found")
 
-    node_id = request.query_params.get("node_id", "")
     if not node_id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -221,6 +231,7 @@ def accept_proposal_endpoint(
                 document,
                 label=child.label,
                 note=child.description,
+                ai_accepted=True,
             )
             evidence = (child.evidence or [{}])[0]
             page_note = f"page {evidence.get('page_number')}" if evidence else ""

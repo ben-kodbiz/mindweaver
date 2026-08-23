@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from mindweaver.config import Settings
@@ -32,6 +33,8 @@ class VisionInterpretation:
     suggested_text: str | None = None
     confidence: float | None = None
     source: str = "vision_model"
+    source_model: str = ""
+    analyzed_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +46,8 @@ class VisionInterpretation:
             "suggested_text": self.suggested_text,
             "confidence": self.confidence,
             "source": self.source,
+            "source_model": self.source_model,
+            "analyzed_at": self.analyzed_at,
         }
 
 
@@ -130,6 +135,9 @@ def analyze_page(
         ],
         suggested_text=parsed.get("suggested_text"),
         confidence=float(parsed["confidence"]) if parsed.get("confidence") is not None else None,
+        source="vision_model",
+        source_model=getattr(vision_model.config, "model", "") or "",
+        analyzed_at=datetime.now(UTC).isoformat(),
     )
 
 

@@ -175,6 +175,7 @@ def restore_snapshot(session: Session, document_id: str, snapshot: dict[str, Any
             is_important=item.get("is_important", False),
             is_bookmarked=item.get("is_bookmarked", False),
             is_user_created=item.get("is_user_created", False),
+            ai_accepted=item.get("ai_accepted", False),
         )
         session.add(record)
         session.flush()

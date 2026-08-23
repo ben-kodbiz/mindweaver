@@ -153,6 +153,56 @@ class IntelligenceModel:
         }
         return self.chat([message], **options)
 
+    def probe(self) -> dict[str, Any]:
+        """Lightweight reachability check — hits /v1/models (or equivalent)."""
+        url = self.config.base_url.rstrip("/") + "/models"
+        try:
+            resp = self.client.get(url, timeout=httpx.Timeout(5.0))
+            resp.raise_for_status()
+            models = resp.json().get("data", [])
+            model_ids = [m.get("id", "") for m in models]
+            reachable = True
+        except Exception:
+            model_ids = []
+            reachable = False
+        return {
+            "reachable": reachable,
+            "base_url": self.config.base_url,
+            "configured_model": self.config.model,
+            "available_models": model_ids,
+        }
+
+    def probe_capabilities(self) -> dict[str, Any]:
+        """Send a minimal chat request to verify declared capabilities actually work."""
+        results: dict[str, Any] = {}
+        if self.capabilities.chat:
+            try:
+                resp = self.chat(
+                    [{"role": "user", "content": "Reply with only: ok"}],
+                    max_tokens=8,
+                )
+                results["chat"] = bool(resp.content and resp.content.strip())
+            except Exception as exc:
+                results["chat"] = False
+                results["chat_error"] = str(exc)
+        if self.capabilities.tool_calling:
+            try:
+                test_tool = {
+                    "name": "test_probe",
+                    "description": "A test tool that returns ok",
+                    "parameters": {"type": "object", "properties": {}},
+                }
+                resp = self.chat_with_tools(
+                    [{"role": "user", "content": "Call the test_probe tool"}],
+                    [test_tool],
+                    max_tokens=32,
+                )
+                results["tool_calling"] = resp.has_tool_calls
+            except Exception as exc:
+                results["tool_calling"] = False
+                results["tool_calling_error"] = str(exc)
+        return results
+
 
 class IntelligenceGateway:
     """Aggregates the configured text + vision endpoints."""
@@ -172,3 +222,18 @@ class IntelligenceGateway:
     @cached_property
     def vision(self) -> IntelligenceModel:
         return IntelligenceModel(self.config.vision, self.client)
+
+    def health_check(self) -> dict[str, Any]:
+        """Probe both endpoints and return reachability status."""
+        result: dict[str, Any] = {"text": {}, "vision": {}}
+        if self.config.text.enabled:
+            try:
+                result["text"] = self.text.probe()
+            except Exception as exc:
+                result["text"] = {"reachable": False, "error": str(exc)}
+        if self.config.vision.enabled:
+            try:
+                result["vision"] = self.vision.probe()
+            except Exception as exc:
+                result["vision"] = {"reachable": False, "error": str(exc)}
+        return result

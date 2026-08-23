@@ -71,6 +71,7 @@ class GraphNode(BaseModel):
     is_important: bool = False
     is_bookmarked: bool = False
     is_user_created: bool = False
+    ai_accepted: bool = False
 
 
 class GraphEdge(BaseModel):
