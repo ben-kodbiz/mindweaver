@@ -44,6 +44,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.engine = build_engine(settings)
     app.state.session_factory = make_session_factory(app.state.engine)
+    if settings.intelligence.enabled:
+        from mindweaver.intelligence.gateway import IntelligenceGateway
+
+        app.state.intelligence_gateway = IntelligenceGateway(settings.intelligence)
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(

@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 
 def test_app_starts_without_intelligence_config():
-    settings = Settings()
+    settings = Settings(_env_file=None)
     assert settings.intelligence.enabled is False
 
 

@@ -7,6 +7,7 @@ attributes every node/edge to its source chunks so the graph stays traceable.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import defaultdict
 from typing import Any
@@ -54,6 +55,8 @@ def _json_loads(value: str) -> list[str]:
     except Exception:
         return []
 
+
+logger = logging.getLogger("mindweaver.graph.extractor")
 
 SYSTEM_PROMPT = (
     "You extract a knowledge graph from a document. Node types: concept, claim, "
@@ -244,6 +247,12 @@ def extract_graph(
 
     payload = extract_json(raw)
     if payload is None:
+        logger.error(
+            "graph.extract invalid JSON raw_len=%d head=%r tail=%r",
+            len(raw),
+            raw[:500],
+            raw[-500:],
+        )
         raise GraphExtractionError("LLM returned invalid JSON for graph extraction")
 
     nodes, edges, warnings = normalize_graph(payload, document.id, chunks)

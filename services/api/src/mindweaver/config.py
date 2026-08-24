@@ -95,13 +95,13 @@ class SearchConfig(BaseModel):
 
 class ChatConfig(BaseModel):
     evidence_limit: int = 5
-    max_tokens: int = 512
+    max_tokens: int = 2048
 
 
 class GraphConfig(BaseModel):
     max_chunks: int = 40
     max_nodes: int = 100
-    max_tokens: int = 1024
+    max_tokens: int = 4096
 
 
 HardwareProfile = Literal["low", "medium", "high"]

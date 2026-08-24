@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import Boolean, create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -34,6 +34,33 @@ def build_engine(settings: Settings) -> Engine:
     return engine
 
 
+def _migrate_missing_columns(engine: Engine) -> None:
+    """SQLite create_all does not alter existing tables; add any columns that
+    the models gained since the table was first created."""
+    from sqlalchemy import inspect as sa_inspect
+
+    from mindweaver import models as _models  # noqa: F401  (registers tables)
+
+    inspector = sa_inspect(engine)
+    for table in Base.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue
+        existing = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            col_type = column.type.compile(engine.dialect)
+            clause = f'ALTER TABLE {table.name} ADD COLUMN "{column.name}" {col_type}'
+            if not column.nullable:
+                # SQLite requires a DEFAULT for NOT NULL columns on existing rows.
+                if isinstance(column.type, Boolean):
+                    clause += " NOT NULL DEFAULT 0"
+                else:
+                    clause += " NOT NULL DEFAULT ''"
+            with engine.begin() as conn:
+                conn.execute(text(clause))
+
+
 def init_database(engine: Engine) -> None:
     from mindweaver import models as _models  # noqa: F401  (registers tables)
 
@@ -42,6 +69,7 @@ def init_database(engine: Engine) -> None:
         if database not in (None, "", ":memory:"):
             Path(database).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(engine)
+    _migrate_missing_columns(engine)
     from mindweaver.search.fts import ensure_fts
 
     ensure_fts(engine)

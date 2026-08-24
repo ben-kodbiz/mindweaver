@@ -95,19 +95,28 @@ def _get_page(context: ToolContext, document_id: str = "", page_number: int = 1)
 def _get_graph_node(context: ToolContext, node_id: str = "") -> dict[str, Any]:
     from mindweaver.graph.service import get_graph
 
+    wanted = node_id.strip()
     for document_id in context.document_ids:
         graph = get_graph(context.session, document_id)
         if graph is None:
             continue
         for node in graph.nodes:
-            if node.id == node_id:
+            if node.id == wanted or node.label.lower() == wanted.lower():
                 return node.model_dump()
     raise ToolError(f"node not found in scope: {node_id}")
 
 
 def _get_graph_neighbors(context: ToolContext, node_id: str = "", depth: int = 1) -> dict[str, Any]:
     depth = max(1, min(int(depth), 2))
-    frontier = {node_id}
+    resolved: set[str] = set()
+    for document_id in context.document_ids:
+        graph = get_graph(context.session, document_id)
+        if graph is None:
+            continue
+        for node in graph.nodes:
+            if node.id == node_id or node.label.lower() == node_id.strip().lower():
+                resolved.add(node.id)
+    frontier = resolved or {node_id}
     neighbours: dict[str, dict[str, Any]] = {}
     relations: list[dict[str, Any]] = []
     seen_edges: set[tuple[str, str, str]] = set()
@@ -194,7 +203,10 @@ def register_builtin_tools(registry: ToolRegistry) -> None:
     registry.register(
         ToolSpec(
             name="get_graph_node",
-            description="Return one knowledge-graph node.",
+            description=(
+                "Return one knowledge-graph node. Use the exact node id "
+                "(e.g. 'concept:memory') from list_graph_nodes or the expansion request."
+            ),
             parameters={
                 "type": "object",
                 "properties": {"node_id": {"type": "string"}},
